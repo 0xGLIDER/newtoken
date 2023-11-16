@@ -4,10 +4,16 @@ pragma solidity ^0.8.0;
 
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 
 contract Token is ERC20, AccessControl {
     
+
+    using SafeERC20 for IERC20;
+
+    IERC20 private token;
 
     
    //------RBAC Vars--------------
@@ -49,39 +55,39 @@ contract Token is ERC20, AccessControl {
         _cap = 1e26;
         mintDisabled = true;
         mintToDisabled = true;
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _grantRole(DEFAULT_ADMIN_ROLE, _msgSender());
     }
     
 
     //--------Toggle Functions----------------
     
     function setPaused(bool _paused) external {
-        require(hasRole(_ADMIN, msg.sender),"Contract: Need Admin");
+        require(hasRole(_ADMIN, _msgSender()),"Contract: Need Admin");
         paused = _paused;
         if (_paused == true) {
-            emit ContractPaused (block.number, msg.sender);
+            emit ContractPaused (block.number, _msgSender());
         } else if (_paused == false) {
-            emit ContractUnpaused (block.number, msg.sender);
+            emit ContractUnpaused (block.number, _msgSender());
         }
     }
     
     function disableMint(bool _disableMinting) external {
-        require(hasRole(_ADMIN, msg.sender),"Contract: Need Admin");
+        require(hasRole(_ADMIN, _msgSender()),"Contract: Need Admin");
         mintDisabled = _disableMinting;
         if (_disableMinting == true){
-            emit MintingDisabled (block.number, msg.sender);
+            emit MintingDisabled (block.number, _msgSender());
         }  else if (_disableMinting == false) {
-            emit MintingEnabled (block.number, msg.sender);
+            emit MintingEnabled (block.number, _msgSender());
         }  
     }
     
     function disableMintTo(bool _disableMintTo) external {
-        require(hasRole(_ADMIN, msg.sender),"Contract: Need Admin");
+        require(hasRole(_ADMIN, _msgSender()),"Contract: Need Admin");
         mintToDisabled = _disableMintTo;
         if (_disableMintTo == true) {
-            emit MintingToDisabled (block.number, msg.sender);
+            emit MintingToDisabled (block.number, _msgSender());
         } else if (_disableMintTo == false) {
-            emit MintingToEnabled (block.number, msg.sender);
+            emit MintingToEnabled (block.number, _msgSender());
         }
     }
 
@@ -105,37 +111,49 @@ contract Token is ERC20, AccessControl {
     //------Token Functions-----------------
     
     function mintTo(address _to, uint _amount) external pause mintToDis{
-        require(hasRole(_MINTTO, msg.sender),"Contract: Need Minto");
+        require(hasRole(_MINTTO, _msgSender()),"Contract: Need Minto");
         _mint(_to, _amount);
         emit TokensMintedTo(_to, _amount);
     }
     
     function mint( uint _amount) external pause mintDis{
-        require(hasRole(_MINT, msg.sender),"Contract: Need Mint");
-        _mint(msg.sender, _amount);
+        require(hasRole(_MINT, _msgSender()),"Contract: Need Mint");
+        _mint(_msgSender(), _amount);
         emit TokensMinted(_amount);
     }
     
     function burn(uint _amount) external pause { 
-        require(hasRole(_BURN, msg.sender),"Contract: Need Burn");
-        _burn(msg.sender,  _amount);
-        emit TokensBurned(_amount, msg.sender);
+        require(hasRole(_BURN, _msgSender()),"Contract: Need Burn");
+        _burn(_msgSender(),  _amount);
+        emit TokensBurned(_amount, _msgSender());
     }
     
     function burnFrom(address _from, uint _amount) external pause {
-        require(hasRole(_BURNFROM, msg.sender),"Contract: Need Burnfrom");
+        require(hasRole(_BURNFROM, _msgSender()),"Contract: Need Burnfrom");
         _burn(_from, _amount);
-        emit TokensBurnedFrom(_from, _amount, msg.sender);
+        emit TokensBurnedFrom(_from, _amount, _msgSender());
+    }
+
+    function transfer(address to, uint256 value) public virtual override returns (bool) {
+        token.safeTransfer(to, value);
+        return true;
+    }
+
+    function transferFrom(address from, address to, uint256 amount) public virtual override returns (bool) {
+        address spender = _msgSender();
+        _spendAllowance(from, spender, amount);
+        token.safeTransferFrom(from, to, amount);
+        return true;
     }
 
     //----------Supply Cap------------------
     
     function setSupplyCap(uint _supplyCap) external pause {
-        require(hasRole(_SUPPLY, msg.sender));
+        require(hasRole(_SUPPLY, _msgSender()));
         require(_supplyCap >= totalSupply(), "Contract: Supply");
         require(totalSupply() <= _supplyCap, "Contract: Supply Cap");
         _cap = _supplyCap;
-        emit SupplyCapChanged (_supplyCap, msg.sender);
+        emit SupplyCapChanged (_supplyCap, _msgSender());
     }
     
     function supplyCap() public view returns (uint) {
