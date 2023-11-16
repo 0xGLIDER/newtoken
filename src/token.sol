@@ -20,6 +20,7 @@ contract Token is ERC20, AccessControl {
     bytes32 public constant _BURNFROM = keccak256("_BURNFROM");
     bytes32 public constant _SUPPLY = keccak256("_SUPPLY");
     bytes32 public constant _ADMIN = keccak256("_ADMIN");
+    bytes32 public constant _RESCUE = keccak256("_RESCUE");
    
    //------Token Variables------------------
    
@@ -164,13 +165,13 @@ contract Token is ERC20, AccessControl {
     //----------Rescue Functions------------
 
     function moveERC20(address _ERC20, address _dest, uint _ERC20Amount) public {
-        require(hasRole(_ADMIN, msg.sender));
+        require(hasRole(_RESCUE, msg.sender));
         IERC20(_ERC20).safeTransfer(_dest, _ERC20Amount);
 
     }
 
     function ethRescue(address payable _dest, uint _etherAmount) public {
-        require(hasRole(_ADMIN, msg.sender));
+        require(hasRole(_RESCUE, msg.sender));
         _dest.transfer(_etherAmount);
     }
     
