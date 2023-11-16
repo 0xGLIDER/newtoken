@@ -41,7 +41,7 @@ contract NFT is ERC721URIStorage, AccessControl {
         string memory newID = string.concat(currentTokenURI, hextool.toHex(hashUserAddress(tokenId)));
         _setTokenURI(tokenId, newID);
         _safeMint(msg.sender, tokenId);
-        totalSupply = totalSupply + 1;
+        totalSupply = ++totalSupply;
         require(totalSupply <= cap,"NFT: Supply Cap");
         return tokenId;
     }
