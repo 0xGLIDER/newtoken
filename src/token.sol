@@ -9,12 +9,8 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 
 contract Token is ERC20, AccessControl {
-    
 
     using SafeERC20 for IERC20;
-
-    IERC20 private token;
-
     
    //------RBAC Vars--------------
    
@@ -53,9 +49,15 @@ contract Token is ERC20, AccessControl {
     
     constructor() ERC20("Token", "TKN") {
         _cap = 1e26;
-        mintDisabled = true;
-        mintToDisabled = true;
+        mintDisabled = false;
+        mintToDisabled = false;
         _grantRole(DEFAULT_ADMIN_ROLE, _msgSender());
+
+        //-----Testing----
+
+        _grantRole(_ADMIN, _msgSender());
+        _grantRole(_MINT, _msgSender());
+        _grantRole(_BURN, _msgSender());
     }
     
 
@@ -134,17 +136,6 @@ contract Token is ERC20, AccessControl {
         emit TokensBurnedFrom(_from, _amount, _msgSender());
     }
 
-    function transfer(address to, uint256 value) public virtual override returns (bool) {
-        token.safeTransfer(to, value);
-        return true;
-    }
-
-    function transferFrom(address from, address to, uint256 amount) public virtual override returns (bool) {
-        address spender = _msgSender();
-        _spendAllowance(from, spender, amount);
-        token.safeTransferFrom(from, to, amount);
-        return true;
-    }
 
     //----------Supply Cap------------------
     
@@ -182,7 +173,5 @@ contract Token is ERC20, AccessControl {
         require(hasRole(_ADMIN, msg.sender));
         _dest.transfer(_etherAmount);
     }
-
-    
     
 }
