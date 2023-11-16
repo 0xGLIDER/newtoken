@@ -45,6 +45,8 @@ contract Token is ERC20, AccessControl {
     event MintingDisabled (uint _blockHeight, address _disabledBy);
     event MintingToEnabled (uint _blockHeight, address _enabledBy);
     event MintingToDisabled (uint _blockHeight, address _disabledBy);
+    event ETHRescued (address _dest, uint _blockHeight, uint _amount);
+    event ERC20Rescued (IERC20 _token, uint _blockHeight, address _dest, uint _amount);
    
     //------Token/Admin Constructor---------
     
@@ -68,9 +70,15 @@ contract Token is ERC20, AccessControl {
         require(hasRole(_ADMIN, _msgSender()),"Contract: Need Admin");
         paused = _paused;
         if (_paused == true) {
-            emit ContractPaused (block.number, _msgSender());
+            emit ContractPaused (
+                block.number, 
+                _msgSender()
+            );
         } else if (_paused == false) {
-            emit ContractUnpaused (block.number, _msgSender());
+            emit ContractUnpaused (
+                block.number, 
+                _msgSender()
+            );
         }
     }
     
@@ -78,9 +86,15 @@ contract Token is ERC20, AccessControl {
         require(hasRole(_ADMIN, _msgSender()),"Contract: Need Admin");
         mintDisabled = _disableMinting;
         if (_disableMinting == true){
-            emit MintingDisabled (block.number, _msgSender());
+            emit MintingDisabled (
+                block.number, 
+                _msgSender()
+            );
         }  else if (_disableMinting == false) {
-            emit MintingEnabled (block.number, _msgSender());
+            emit MintingEnabled (
+                block.number, 
+                _msgSender()
+            );
         }  
     }
     
@@ -88,9 +102,15 @@ contract Token is ERC20, AccessControl {
         require(hasRole(_ADMIN, _msgSender()),"Contract: Need Admin");
         mintToDisabled = _disableMintTo;
         if (_disableMintTo == true) {
-            emit MintingToDisabled (block.number, _msgSender());
+            emit MintingToDisabled (
+                block.number, 
+                _msgSender()
+            );
         } else if (_disableMintTo == false) {
-            emit MintingToEnabled (block.number, _msgSender());
+            emit MintingToEnabled (
+                block.number, 
+                _msgSender()
+            );
         }
     }
 
@@ -116,25 +136,36 @@ contract Token is ERC20, AccessControl {
     function mintTo(address _to, uint _amount) external pause mintToDis{
         require(hasRole(_MINTTO, _msgSender()),"Contract: Need Minto");
         _mint(_to, _amount);
-        emit TokensMintedTo(_to, _amount);
+        emit TokensMintedTo(
+            _to, 
+            _amount
+        );
     }
     
     function mint( uint _amount) external pause mintDis{
         require(hasRole(_MINT, _msgSender()),"Contract: Need Mint");
         _mint(_msgSender(), _amount);
-        emit TokensMinted(_amount);
+        emit TokensMinted(
+            _amount
+        );
     }
     
     function burn(uint _amount) external pause { 
         require(hasRole(_BURN, _msgSender()),"Contract: Need Burn");
         _burn(_msgSender(),  _amount);
-        emit TokensBurned(_amount, _msgSender());
+        emit TokensBurned(
+            _amount, _msgSender()
+        );
     }
     
     function burnFrom(address _from, uint _amount) external pause {
         require(hasRole(_BURNFROM, _msgSender()),"Contract: Need Burnfrom");
         _burn(_from, _amount);
-        emit TokensBurnedFrom(_from, _amount, _msgSender());
+        emit TokensBurnedFrom(
+            _from, 
+            _amount, 
+            _msgSender()
+        );
     }
 
 
@@ -145,7 +176,10 @@ contract Token is ERC20, AccessControl {
         require(_supplyCap >= totalSupply(), "Contract: Supply");
         require(totalSupply() <= _supplyCap, "Contract: Supply Cap");
         _cap = _supplyCap;
-        emit SupplyCapChanged (_supplyCap, _msgSender());
+        emit SupplyCapChanged (
+            _supplyCap, 
+            _msgSender()
+        );
     }
     
     function supplyCap() public view returns (uint) {
@@ -157,24 +191,42 @@ contract Token is ERC20, AccessControl {
         super._update(from, to, amount);
         if (from == address(0)) { 
             require(totalSupply() <= _cap, "Contract: Supply Cap");
-            emit Transfer(from, to, amount);
+            emit Transfer(
+                from, 
+                to, 
+                amount
+            );
         } else if (from != address(0)) {
-            emit Transfer(from, to, amount);
+            emit Transfer(
+                from, 
+                to, 
+                amount
+            );
         }
     }
 
 
     //----------Rescue Functions------------
 
-    function moveERC20(address _ERC20, address _dest, uint _ERC20Amount) public {
+    function moveERC20(IERC20 _ERC20, address _dest, uint _ERC20Amount) public {
         require(hasRole(_RESCUE, msg.sender));
         IERC20(_ERC20).safeTransfer(_dest, _ERC20Amount);
-
+        emit ERC20Rescued(
+            _ERC20, 
+            block.number, 
+            _dest, 
+            _ERC20Amount
+        );
     }
 
     function ethRescue(address payable _dest, uint _etherAmount) public {
         require(hasRole(_RESCUE, msg.sender));
         _dest.transfer(_etherAmount);
+        emit ETHRescued(
+            _dest, 
+            block.number, 
+            _etherAmount
+        );
     }
     
 }
