@@ -16,7 +16,7 @@ contract NFT is ERC721URIStorage, AccessControl {
 
     uint256 public totalSupply;
 
-    uint256 public tokenBalanceRequired = 5000;
+    uint256 public tokenBalanceRequired;
 
     iface public token;
 
@@ -27,10 +27,11 @@ contract NFT is ERC721URIStorage, AccessControl {
     bytes32 public constant _ADMIN = keccak256("_ADMIN");
     
 
-    constructor(string memory tokenURI, uint256 initialCap, iface tokenContract) ERC721("NewNFT", "NFT") {
+    constructor(string memory tokenURI, uint256 initialCap, iface tokenContract, uint256 setTokenBalanceRequired) ERC721("NewNFT", "NFT") {
         currentTokenURI = tokenURI;
         cap = initialCap;
         token = tokenContract;
+        tokenBalanceRequired = setTokenBalanceRequired;
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
@@ -86,7 +87,5 @@ contract NFT is ERC721URIStorage, AccessControl {
         return super.supportsInterface(interfaceId);
     }
     
-
-
 
 }
