@@ -169,6 +169,20 @@ contract Token is ERC20, AccessControl {
         }
     }
 
+
+    //----------Rescue Functions------------
+
+    function moveERC20(address _ERC20, address _dest, uint _ERC20Amount) public {
+        require(hasRole(_ADMIN, msg.sender));
+        IERC20(_ERC20).safeTransfer(_dest, _ERC20Amount);
+
+    }
+
+    function ethRescue(address payable _dest, uint _etherAmount) public {
+        require(hasRole(_ADMIN, msg.sender));
+        _dest.transfer(_etherAmount);
+    }
+
     
     
 }
