@@ -158,6 +158,8 @@ contract Token is ERC20, AccessControl {
         if (from == address(0)) { 
             require(totalSupply() <= _cap, "Contract: Supply Cap");
             emit Transfer(from, to, amount);
+        } else if (from != address(0)) {
+            emit Transfer(from, to, amount);
         }
     }
 
