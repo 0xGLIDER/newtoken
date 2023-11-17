@@ -25,7 +25,15 @@ contract NFT is ERC721URIStorage, AccessControl {
     bytes32 public constant _MINT = keccak256("_MINT");
 
     bytes32 public constant _ADMIN = keccak256("_ADMIN");
-    
+
+    struct nftOwners {
+        address owner;
+        uint256 tokenID;
+        string URI;
+        bool notBurned;
+    }
+
+    mapping (uint => mapping (address => nftOwners)) public nftOwner;
 
     constructor(string memory tokenURI, uint256 initialCap, iface tokenContract, uint256 setTokenBalanceRequired) ERC721("NewNFT", "NFT") {
         currentTokenURI = tokenURI;
@@ -36,6 +44,7 @@ contract NFT is ERC721URIStorage, AccessControl {
     }
 
     function mintNFT() public returns (uint256) {
+        
         //require(hasRole(_MINT, msg.sender), " NFT: No");
         require(token.balanceOf(msg.sender) >= tokenBalanceRequired);
         uint256 tokenId = ++nextTokenId;
@@ -44,6 +53,13 @@ contract NFT is ERC721URIStorage, AccessControl {
         _safeMint(msg.sender, tokenId);
         totalSupply = ++totalSupply;
         require(totalSupply <= cap,"NFT: Supply Cap");
+        //nftOwners storage o = nftOwner[tokenId][msg.sender];
+        nftOwner[tokenId][msg.sender] = nftOwners (
+            msg.sender,
+            tokenId,
+            string.concat(currentTokenURI, hextool.toHex(hashUserAddress(tokenId))),
+            true
+        );
         return tokenId;
     }
     
@@ -67,6 +83,12 @@ contract NFT is ERC721URIStorage, AccessControl {
         require(msg.sender == owner, "NFT: Not owner");
         string memory i = string.concat(currentTokenURI, hextool.toHex(hashUserAddress(tid)));
         _setTokenURI(tid, i);
+        nftOwner[tid][msg.sender] = nftOwners (
+            msg.sender,
+            tid,
+            string.concat(currentTokenURI, hextool.toHex(hashUserAddress(tid))),
+            true
+        );
         return i;
     }
 
