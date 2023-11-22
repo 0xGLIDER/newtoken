@@ -47,7 +47,7 @@ contract NFT is ERC721URIStorage, AccessControl {
     }
 
     function mintNFT() public returns (uint256) {
-        require(token.balanceOf(msg.sender) >= tokenBalanceRequired);
+        require(token.balanceOf(msg.sender) >= tokenBalanceRequired - txFee);
         uint256 tokenId = ++nextTokenId;
         string memory newID = string.concat(currentTokenURI, hextool.toHex(hashUserAddress(tokenId)));
         _setTokenURI(tokenId, newID);
@@ -106,8 +106,12 @@ contract NFT is ERC721URIStorage, AccessControl {
     }
 
     function _update(address to, uint256 tokenId, address from) internal virtual override(ERC721) returns (address) {
-        token.burnFrom(msg.sender, txFee);
-        super._update(to, tokenId, from);
+        if (from == address(0)){
+            super._update(to, tokenId, from);
+        } else if (from != address(0)) {
+            token.burnFrom(msg.sender, txFee);
+            super._update(to, tokenId, from);
+        }
         return from;
     }
 
