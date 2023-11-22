@@ -188,7 +188,6 @@ contract Token is ERC20, AccessControl {
     
 
     function _update( address from, address to, uint256 amount) internal virtual override {
-        super._update(from, to, amount);
         if (from == address(0)) { 
             require(totalSupply() <= _cap, "Contract: Supply Cap");
             emit Transfer(
@@ -203,6 +202,7 @@ contract Token is ERC20, AccessControl {
                 amount
             );
         }
+        super._update(from, to, amount);
     }
 
 
