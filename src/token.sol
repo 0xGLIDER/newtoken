@@ -49,6 +49,10 @@ contract Token is ERC20, AccessControl {
     event MintingToDisabled (uint _blockHeight, address _disabledBy);
     event ETHRescued (address _dest, uint _blockHeight, uint _amount);
     event ERC20Rescued (IERC20 _token, uint _blockHeight, address _dest, uint _amount);
+
+    //------Mapping----------
+
+    mapping(address => bool) public whitelistedAddress;
    
     //------Token/Admin Constructor---------
     
@@ -201,16 +205,26 @@ contract Token is ERC20, AccessControl {
 
     function transferFrom(address from, address to, uint256 value) public virtual override returns (bool) {
         address spender = _msgSender();
-        _transfer(from, to, value);
-        _transfer(from, vault, txFee);
-        _spendAllowance(from, spender, value); 
+        if(whitelistedAddress[spender]) {
+            _transfer(from, to, value);
+            _spendAllowance(from, spender, value);
+        }else{
+            _transfer(from, to, value);
+            _transfer(from, vault, txFee);
+            _spendAllowance(from, spender, value); 
+        }
         return true;
     }
 
     function transfer(address to, uint256 value) public virtual override returns (bool) {
         address owner = _msgSender();
-        _transfer(owner, to, value);
-        _transfer(owner, vault, txFee);
+        if(whitelistedAddress[owner]) {
+            _transfer(owner, to, value);
+        }else {
+            _transfer(owner, to, value);
+            _transfer(owner, vault, txFee);
+        }
+ 
         return true;
     }
     
