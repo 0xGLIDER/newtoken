@@ -227,7 +227,13 @@ contract Token is ERC20, AccessControl {
  
         return true;
     }
-    
+
+    //---------Whitelist--------------------
+
+    function setWhitelistAddress(address _whitelist, bool _status) external {
+        require(_whitelist != address(0), "setWhitelistAddress: Zero address");
+        whitelistedAddress[_whitelist] = _status;
+    }
 
     //----------Rescue Functions------------
 
