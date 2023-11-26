@@ -25,6 +25,8 @@ contract Token is ERC20, AccessControl {
    //------Token Variables------------------
    
     uint private _cap;
+    address public vault;
+    uint public txFee = 50000;
     
     //-------Toggle Variables---------------
     
@@ -50,10 +52,11 @@ contract Token is ERC20, AccessControl {
    
     //------Token/Admin Constructor---------
     
-    constructor() ERC20("Token", "TKN") {
+    constructor(address _vault) ERC20("Token", "TKN") {
         _cap = 1e26;
         mintDisabled = false;
         mintToDisabled = false;
+        vault = _vault;
         _grantRole(DEFAULT_ADMIN_ROLE, _msgSender());
 
         //-----Testing----
@@ -135,37 +138,37 @@ contract Token is ERC20, AccessControl {
     
     function mintTo(address _to, uint _amount) external pause mintToDis{
         require(hasRole(_MINTTO, _msgSender()),"Contract: Need Minto");
-        _mint(_to, _amount);
         emit TokensMintedTo(
             _to, 
             _amount
         );
+        _mint(_to, _amount);
     }
     
     function mint( uint _amount) external pause mintDis{
         require(hasRole(_MINT, _msgSender()),"Contract: Need Mint");
-        _mint(_msgSender(), _amount);
         emit TokensMinted(
             _amount
         );
+        _mint(_msgSender(), _amount);
     }
     
     function burn(uint _amount) external pause { 
         require(hasRole(_BURN, _msgSender()),"Contract: Need Burn");
-        _burn(_msgSender(),  _amount);
         emit TokensBurned(
             _amount, _msgSender()
         );
+        _burn(_msgSender(),  _amount);
     }
     
     function burnFrom(address _from, uint _amount) external pause {
         require(hasRole(_BURNFROM, _msgSender()),"Contract: Need Burnfrom");
-        _burn(_from, _amount);
         emit TokensBurnedFrom(
             _from, 
             _amount, 
             _msgSender()
         );
+        _burn(_from, _amount);
     }
 
 
@@ -190,21 +193,27 @@ contract Token is ERC20, AccessControl {
     function _update( address from, address to, uint256 amount) internal virtual override {
         if (from == address(0)) { 
             require(totalSupply() <= _cap, "Contract: Supply Cap");
-            emit Transfer(
-                from, 
-                to, 
-                amount
-            );
-        } else if (from != address(0)) {
-            emit Transfer(
-                from, 
-                to, 
-                amount
-            );
         }
         super._update(from, to, amount);
     }
 
+    //-----------Transfer--------------------
+
+    function transferFrom(address from, address to, uint256 value) public virtual override returns (bool) {
+        address spender = _msgSender();
+        _transfer(from, to, value);
+        _transfer(from, vault, txFee);
+        _spendAllowance(from, spender, value); 
+        return true;
+    }
+
+    function transfer(address to, uint256 value) public virtual override returns (bool) {
+        address owner = _msgSender();
+        _transfer(owner, to, value);
+        _transfer(owner, vault, txFee);
+        return true;
+    }
+    
 
     //----------Rescue Functions------------
 
