@@ -23,6 +23,14 @@ contract TokenStaking is AccessControl {
         uint256 lastClaimBlock;
     }
 
+    struct RewardLevelMultipliers {
+        uint256 gold;
+        uint256 silver;
+        uint256 bronze;
+    }
+
+    RewardLevelMultipliers public rewardLevels;
+
     mapping(address => UserInfo) public userInfo;
 
     event Staked(address indexed staker, uint256 amount);
@@ -35,6 +43,9 @@ contract TokenStaking is AccessControl {
         rewardRatePerBlock = _rewardRatePerBlock;
         lastUpdateBlock = block.number;
         claimInterval = _claimInterval;
+        rewardLevels.gold = 4;
+        rewardLevels.silver = 3;
+        rewardLevels.bronze = 2;
     }
 
 
@@ -77,11 +88,22 @@ contract TokenStaking is AccessControl {
         if(userInfo[_staker].stakedBalance < 1e18) {
            uint256 rewards = 0; 
            return rewards;
-        } else {
+        } else if (goldnft.balanceOf(msg.sender) > 0) {
             uint256 blocksElapsed = block.number - userInfo[_staker].lastClaimBlock ;
             uint256 rewards = (rewardRatePerBlock * blocksElapsed);
             return rewards;
+        } else if (silvernft.balanceOf(msg.sender) > 0){
+            uint256 blocksElapsed = block.number - userInfo[_staker].lastClaimBlock ;
+            uint256 rewards = (rewardRatePerBlock * blocksElapsed);
+            return rewards;
+        } else if (bronzenft.balanceOf(msg.sender) > 0){
+            uint256 blocksElapsed = block.number - userInfo[_staker].lastClaimBlock ;
+            uint256 rewards = (rewardRatePerBlock * blocksElapsed);
+            return rewards;
+        } else {
+            revert();
         }
+
     }
 
     function setRewardRatePerBlock(uint256 _newRewardRatePerBlock) external {
