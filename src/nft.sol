@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 
 import {iface} from "./iface.sol";
 import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {ERC721URIStorage} from "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import {hextool} from "./hex.sol";
@@ -18,11 +19,13 @@ contract NFT is ERC721URIStorage, AccessControl {
 
     uint256 public tokenBalanceRequired;
 
-    iface public token;
+    IERC20 public token;
 
     string public currentTokenURI;
 
     uint256 public txFee;
+
+    address public vault;
 
     bytes32 public constant _MINT = keccak256("_MINT");
 
@@ -37,12 +40,13 @@ contract NFT is ERC721URIStorage, AccessControl {
 
     mapping (uint => mapping (address => nftOwners)) public nftOwner;*/
 
-    constructor(string memory tokenURI, uint256 initialCap, iface tokenContract, uint256 setTokenBalanceRequired, uint256 setTxFee) ERC721("NewNFT", "NFT") {
-        currentTokenURI = tokenURI;
-        cap = initialCap;
-        token = tokenContract;
-        tokenBalanceRequired = setTokenBalanceRequired;
-        txFee = setTxFee;
+    constructor(string memory _tokenURI, uint256 _initialCap, IERC20 _tokenContract, uint256 _setTokenBalanceRequired, uint256 _setTxFee, address _setVault) ERC721("NewNFT", "NFT") {
+        currentTokenURI = _tokenURI;
+        cap = _initialCap;
+        token = _tokenContract;
+        tokenBalanceRequired = _setTokenBalanceRequired;
+        txFee = _setTxFee;
+        vault = _setVault;
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
@@ -98,6 +102,10 @@ contract NFT is ERC721URIStorage, AccessControl {
         return rta;
     }
 
+    function setTxFee(uint256 _newFee) external {
+        txFee = _newFee;
+    }
+
     function hashUserAddress (uint256 eid) public view returns (bytes32) {
         address userAddress = address(msg.sender);
         uint256 userEID = eid;
@@ -109,7 +117,7 @@ contract NFT is ERC721URIStorage, AccessControl {
         if (from == address(0)){
             super._update(to, tokenId, from);
         } else if (from != address(0)) {
-            token.burnFrom(msg.sender, txFee);
+            require(token.transferFrom(msg.sender, vault, txFee), "Fee transfer failed");
             super._update(to, tokenId, from);
         }
         return from;
