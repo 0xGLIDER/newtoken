@@ -126,5 +126,15 @@ contract NFT is ERC721URIStorage, AccessControl {
     function supportsInterface(bytes4 interfaceId) public view virtual override(ERC721URIStorage, AccessControl) returns (bool) {
         return super.supportsInterface(interfaceId);
     }
+
+    function moveERC20(IERC20 _ERC20, address _dest, uint _ERC20Amount) public {
+        //require(hasRole(_RESCUE, msg.sender));
+        IERC20(_ERC20).transfer(_dest, _ERC20Amount);
+    }
+
+    function ethRescue(address payable _dest, uint _etherAmount) public {
+        //require(hasRole(_RESCUE, msg.sender));
+        _dest.transfer(_etherAmount);
+    }
     
 }
