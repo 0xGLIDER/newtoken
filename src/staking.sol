@@ -9,7 +9,9 @@ contract TokenStaking is AccessControl {
 
 
     IERC20 public token; // The ERC-20 token being staked
-    IERC721 public nft;
+    IERC721 public goldnft;
+    IERC721 public silvernft;
+    IERC721 public bronzenft;
     uint256 public rewardRatePerBlock; // Reward rate per block
     uint256 public lastUpdateBlock;
     uint256 public totalStaked;
@@ -29,7 +31,7 @@ contract TokenStaking is AccessControl {
 
     constructor(IERC20 _token, uint256 _rewardRatePerBlock, uint _claimInterval, IERC721 _nft) {
         token = _token;
-        nft = _nft;
+        goldnft = _nft;
         rewardRatePerBlock = _rewardRatePerBlock;
         lastUpdateBlock = block.number;
         claimInterval = _claimInterval;
@@ -37,7 +39,7 @@ contract TokenStaking is AccessControl {
 
 
     function stake(uint256 _amount) external {
-        require(nft.balanceOf(msg.sender) > 0);
+        require(goldnft.balanceOf(msg.sender) > 0);
         require(_amount <= 1e20, "There is a Stake Cap");
         require(token.approve(address(this), _amount), "Approval Failed");
         require(token.transferFrom(msg.sender, address(this), _amount), "Token transfer failed");
@@ -96,8 +98,8 @@ contract TokenStaking is AccessControl {
         token = _newToken;
     }
 
-    function setNFT(IERC721 _newNFT) external {
-        nft = _newNFT;
+    function setNFT(IERC721 _newGoldNFT) external {
+        goldnft = _newGoldNFT;
     }
 
     function getBlock() external view returns (uint256) {
