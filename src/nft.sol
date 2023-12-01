@@ -12,34 +12,48 @@ import {hextool} from "./hex.sol";
 contract NFT is ERC721URIStorage, AccessControl {
     
     uint256 private nextTokenId;
-
     uint256 private cap;
-
     uint256 public totalSupply;
-
     uint256 public tokenBalanceRequired;
-
     IERC20 public token;
-
     string public currentTokenURI;
-
     uint256 public txFee;
-
     address public vault;
-
     bytes32 public constant _MINT = keccak256("_MINT");
-
     bytes32 public constant _ADMIN = keccak256("_ADMIN");
 
+    struct SupplyInfo {
+        uint256 goldCap;
+        uint256 silverCap;
+        uint256 bronzeCap;
+        uint256 goldSupply;
+        uint256 silverSupply;
+        uint256 bronzeSupply;
+    }
 
-    constructor(string memory _tokenURI, uint256 _initialCap, IERC20 _tokenContract, uint256 _setTokenBalanceRequired, uint256 _setTxFee, address _setVault) ERC721("NewNFT", "NFT") {
+    SupplyInfo public supplyInfo;
+
+
+    constructor(
+        string memory _tokenURI, 
+        uint256 _initialCap, 
+        IERC20 _tokenContract, 
+        uint256 _setTokenBalanceRequired, 
+        uint256 _setTxFee, 
+        address _setVault
+        ) ERC721("NewNFT", "NFT") {
         currentTokenURI = _tokenURI;
         cap = _initialCap;
         token = _tokenContract;
         tokenBalanceRequired = _setTokenBalanceRequired;
         txFee = _setTxFee;
         vault = _setVault;
+        initializeSupplyInfo();
         _grantRole(DEFAULT_ADMIN_ROLE, _msgSender());
+    }
+
+    function initializeSupplyInfo() internal {
+        supplyInfo = SupplyInfo(50,100,200,0,0,0);
     }
 
     function mintNFT() public returns (uint256) {
@@ -49,6 +63,18 @@ contract NFT is ERC721URIStorage, AccessControl {
         _setTokenURI(tokenId, newID);
         _safeMint(_msgSender(), tokenId);
         totalSupply = ++totalSupply;
+        require(totalSupply <= cap,"NFT: Supply Cap");
+        return tokenId;
+    }
+
+    function mintGoldNFT() public returns (uint256) {
+        require(token.balanceOf(_msgSender()) >= tokenBalanceRequired);
+        uint256 tokenId = ++nextTokenId;
+        string memory newID = string.concat(currentTokenURI, hextool.toHex(hashUserAddress2("GOLD")));
+        _setTokenURI(tokenId, newID);
+        _safeMint(_msgSender(), tokenId);
+        //totalSupply = ++totalSupply;
+        supplyInfo.goldSupply = ++supplyInfo.goldSupply;
         require(totalSupply <= cap,"NFT: Supply Cap");
         return tokenId;
     }
@@ -85,10 +111,22 @@ contract NFT is ERC721URIStorage, AccessControl {
         txFee = _newFee;
     }
 
+    function setSupplyCaps(uint256 _newGS, uint256 _newSS, uint256 _newBS) public {
+        supplyInfo.goldCap = _newGS;
+        supplyInfo.silverCap = _newSS;
+        supplyInfo.bronzeCap = _newBS;
+    }
+
     function hashUserAddress (uint256 eid) public view returns (bytes32) {
         address userAddress = address(_msgSender());
         uint256 userEID = eid;
         bytes32 hashedAddress = keccak256(abi.encodePacked(userAddress, userEID));
+        return hashedAddress;
+    }
+
+    function hashUserAddress2 (string memory _level) public view returns (bytes32) {
+        address userAddress = address(_msgSender());
+        bytes32 hashedAddress = keccak256(abi.encodePacked(userAddress, _level));
         return hashedAddress;
     }
 
