@@ -31,14 +31,6 @@ contract NFT is ERC721URIStorage, AccessControl {
 
     bytes32 public constant _ADMIN = keccak256("_ADMIN");
 
-    /*struct nftOwners {
-        address owner;
-        uint256 tokenID;
-        string URI;
-        bool notBurned;
-    }
-
-    mapping (uint => mapping (address => nftOwners)) public nftOwner;*/
 
     constructor(string memory _tokenURI, uint256 _initialCap, IERC20 _tokenContract, uint256 _setTokenBalanceRequired, uint256 _setTxFee, address _setVault) ERC721("NewNFT", "NFT") {
         currentTokenURI = _tokenURI;
@@ -47,57 +39,44 @@ contract NFT is ERC721URIStorage, AccessControl {
         tokenBalanceRequired = _setTokenBalanceRequired;
         txFee = _setTxFee;
         vault = _setVault;
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _grantRole(DEFAULT_ADMIN_ROLE, _msgSender());
     }
 
     function mintNFT() public returns (uint256) {
-        require(token.balanceOf(msg.sender) >= tokenBalanceRequired);
+        require(token.balanceOf(_msgSender()) >= tokenBalanceRequired);
         uint256 tokenId = ++nextTokenId;
         string memory newID = string.concat(currentTokenURI, hextool.toHex(hashUserAddress(tokenId)));
         _setTokenURI(tokenId, newID);
-        _safeMint(msg.sender, tokenId);
+        _safeMint(_msgSender(), tokenId);
         totalSupply = ++totalSupply;
         require(totalSupply <= cap,"NFT: Supply Cap");
-        //nftOwners storage o = nftOwner[tokenId][msg.sender];
-        /*nftOwner[tokenId][msg.sender] = nftOwners (
-            msg.sender,
-            tokenId,
-            string.concat(currentTokenURI, hextool.toHex(hashUserAddress(tokenId))),
-            true
-        );*/
         return tokenId;
     }
     
     function burnNFT(uint256 tokenId) public {
         address owner = _ownerOf(tokenId);
-        require(msg.sender == owner,"NFT: Not owner");
-        _burn(tokenId);
+        require(_msgSender() == owner,"NFT: Not owner");
+        _update(address(0), tokenId, _msgSender());
         totalSupply = --totalSupply;
         
     }
 
     function setURI(string memory newURI) public returns (string memory) {
-        require(hasRole(_ADMIN, msg.sender), "NFT: Need Admin");
+        require(hasRole(_ADMIN, _msgSender()), "NFT: Need Admin");
         currentTokenURI = newURI;
         return currentTokenURI;
     } 
 
     function userUpdateURI (uint256 tid) public returns (string memory) {
         address owner = _ownerOf(tid);
-        require(msg.sender == owner, "NFT: Not owner");
+        require(_msgSender() == owner, "NFT: Not owner");
         string memory i = string.concat(currentTokenURI, hextool.toHex(hashUserAddress(tid)));
         _setTokenURI(tid, i);
-        /*nftOwner[tid][msg.sender] = nftOwners (
-            msg.sender,
-            tid,
-            string.concat(currentTokenURI, hextool.toHex(hashUserAddress(tid))),
-            true
-        );*/
         return i;
     }
 
     function setRequiredTokenAmount (uint256 rta) public returns (uint256) {
-        require(hasRole(_ADMIN, msg.sender), "NFT: Need Admin");
+        require(hasRole(_ADMIN, _msgSender()), "NFT: Need Admin");
         tokenBalanceRequired = rta;
         return rta;
     }
@@ -107,7 +86,7 @@ contract NFT is ERC721URIStorage, AccessControl {
     }
 
     function hashUserAddress (uint256 eid) public view returns (bytes32) {
-        address userAddress = address(msg.sender);
+        address userAddress = address(_msgSender());
         uint256 userEID = eid;
         bytes32 hashedAddress = keccak256(abi.encodePacked(userAddress, userEID));
         return hashedAddress;
@@ -117,7 +96,7 @@ contract NFT is ERC721URIStorage, AccessControl {
         if (from == address(0)){
             super._update(to, tokenId, from);
         } else if (from != address(0)) {
-            require(token.transferFrom(msg.sender, vault, txFee), "Fee transfer failed");
+            token.transferFrom(_msgSender(), vault, txFee);
             super._update(to, tokenId, from);
         }
         return from;
@@ -128,12 +107,12 @@ contract NFT is ERC721URIStorage, AccessControl {
     }
 
     function moveERC20(IERC20 _ERC20, address _dest, uint _ERC20Amount) public {
-        //require(hasRole(_RESCUE, msg.sender));
+        //require(hasRole(_RESCUE, _msgSender()));
         IERC20(_ERC20).transfer(_dest, _ERC20Amount);
     }
 
     function ethRescue(address payable _dest, uint _etherAmount) public {
-        //require(hasRole(_RESCUE, msg.sender));
+        //require(hasRole(_RESCUE, _msgSender()));
         _dest.transfer(_etherAmount);
     }
     
