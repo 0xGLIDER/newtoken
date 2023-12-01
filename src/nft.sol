@@ -33,6 +33,13 @@ contract NFT is ERC721URIStorage, AccessControl {
 
     SupplyInfo public supplyInfo;
 
+    struct NFTOwnerInfo {
+        bytes32 level;
+        bool hasNFT;
+
+    }
+
+    mapping(address => NFTOwnerInfo) public nftOwnerInfo;
 
     constructor(
         string memory _tokenURI, 
@@ -69,12 +76,19 @@ contract NFT is ERC721URIStorage, AccessControl {
 
     function mintGoldNFT() public returns (uint256) {
         require(token.balanceOf(_msgSender()) >= tokenBalanceRequired);
+        require(nftOwnerInfo[_msgSender()].hasNFT == false, "Can't mint more than one NFT");
         uint256 tokenId = ++nextTokenId;
         string memory newID = string.concat(currentTokenURI, hextool.toHex(hashUserAddress2("GOLD", tokenId)));
         _setTokenURI(tokenId, newID);
         _safeMint(_msgSender(), tokenId);
         totalSupply = ++totalSupply;
-        supplyInfo.goldSupply = ++supplyInfo.goldSupply;
+        ++supplyInfo.goldSupply;
+        NFTOwnerInfo memory n = NFTOwnerInfo({
+            level: hashUserAddress2("GOLD", tokenId),
+            hasNFT: true
+        });
+
+        nftOwnerInfo[_msgSender()] = n;
         require(supplyInfo.goldSupply <= supplyInfo.goldCap,"NFT: Supply Cap");
         return tokenId;
     }
@@ -86,8 +100,14 @@ contract NFT is ERC721URIStorage, AccessControl {
         _setTokenURI(tokenId, newID);
         _safeMint(_msgSender(), tokenId);
         totalSupply = ++totalSupply;
-        supplyInfo.silverSupply = ++supplyInfo.silverSupply;
-        require(totalSupply <= cap,"NFT: Supply Cap");
+        ++supplyInfo.silverSupply;
+        NFTOwnerInfo memory n = NFTOwnerInfo({
+            level: hashUserAddress2("SILVER", tokenId),
+            hasNFT: true
+        });
+
+        nftOwnerInfo[_msgSender()] = n;
+        require(totalSupply <= supplyInfo.silverCap,"NFT: Supply Cap");
         return tokenId;
     }
 
@@ -97,17 +117,26 @@ contract NFT is ERC721URIStorage, AccessControl {
         string memory newID = string.concat(currentTokenURI, hextool.toHex(hashUserAddress2("BRONZE", tokenId)));
         _setTokenURI(tokenId, newID);
         _safeMint(_msgSender(), tokenId);
-        totalSupply = ++totalSupply;
-        supplyInfo.bronzeSupply = ++supplyInfo.bronzeSupply;
+        ++totalSupply;
+        ++supplyInfo.bronzeSupply;
+        NFTOwnerInfo memory n = NFTOwnerInfo({
+            level: hashUserAddress2("BRONZE", tokenId),
+            hasNFT: true
+        });
+
+        nftOwnerInfo[_msgSender()] = n;
         require(supplyInfo.bronzeSupply <= supplyInfo.bronzeCap,"NFT: Supply Cap");
         return tokenId;
     }
     
     function burnNFT(uint256 tokenId) public {
-        address owner = _ownerOf(tokenId);
-        require(_msgSender() == owner,"NFT: Not owner");
+        require(_msgSender() == _ownerOf(tokenId), "NFT: Not owner");
+
+        bytes32 ha = hashUserAddress2("GOLD", tokenId);
+        require(ha == hashUserAddress2("GOLD", tokenId), "Invalid hash check");
+
         _update(address(0), tokenId, _msgSender());
-        supplyInfo.goldSupply = --supplyInfo.goldSupply;
+        supplyInfo.goldSupply--;
     }
 
     function setURI(string memory newURI) public returns (string memory) {
@@ -140,12 +169,9 @@ contract NFT is ERC721URIStorage, AccessControl {
         supplyInfo.bronzeCap = _newBS;
     }
 
-    function hashUserAddress (uint256 eid) public view returns (bytes32) {
-        address userAddress = address(_msgSender());
-        uint256 userEID = eid;
-        bytes32 hashedAddress = keccak256(abi.encodePacked(userAddress, userEID));
-        return hashedAddress;
-    }
+    function hashUserAddress(uint256 eid) public view returns (bytes32) {
+    return keccak256(abi.encodePacked(msg.sender, eid));
+}
 
     function hashUserAddress2(string memory _level, uint256 _eid) public view returns (bytes32) {
     return keccak256(abi.encodePacked(msg.sender, _level, _eid));
