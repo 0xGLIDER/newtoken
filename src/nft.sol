@@ -34,7 +34,7 @@ contract NFT is ERC721URIStorage, AccessControl {
     SupplyInfo public supplyInfo;
 
     struct NFTOwnerInfo {
-        bytes32 level;
+        string level;
         bool hasNFT;
 
     }
@@ -84,7 +84,7 @@ contract NFT is ERC721URIStorage, AccessControl {
         totalSupply = ++totalSupply;
         ++supplyInfo.goldSupply;
         NFTOwnerInfo memory n = NFTOwnerInfo({
-            level: hashUserAddress2("GOLD", tokenId),
+            level: "GOLD",
             hasNFT: true
         });
 
@@ -102,7 +102,7 @@ contract NFT is ERC721URIStorage, AccessControl {
         totalSupply = ++totalSupply;
         ++supplyInfo.silverSupply;
         NFTOwnerInfo memory n = NFTOwnerInfo({
-            level: hashUserAddress2("SILVER", tokenId),
+            level: "SILVER",
             hasNFT: true
         });
 
@@ -120,7 +120,7 @@ contract NFT is ERC721URIStorage, AccessControl {
         ++totalSupply;
         ++supplyInfo.bronzeSupply;
         NFTOwnerInfo memory n = NFTOwnerInfo({
-            level: hashUserAddress2("BRONZE", tokenId),
+            level: "BRONZE",
             hasNFT: true
         });
 
@@ -181,7 +181,21 @@ contract NFT is ERC721URIStorage, AccessControl {
         if (from == address(0)){
             super._update(to, tokenId, from);
         } else if (from != address(0)) {
+            string memory lvl = nftOwnerInfo[_msgSender()].level;
             token.transferFrom(_msgSender(), vault, txFee);
+            NFTOwnerInfo memory n = NFTOwnerInfo({
+            level: "",
+            hasNFT: false
+            });
+
+            nftOwnerInfo[_msgSender()] = n;
+
+            NFTOwnerInfo memory a = NFTOwnerInfo({
+            level: lvl,
+            hasNFT: true
+            });
+
+            nftOwnerInfo[to] = a;
             super._update(to, tokenId, from);
         }
         return from;
