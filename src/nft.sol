@@ -12,7 +12,6 @@ import {hextool} from "./hex.sol";
 contract NFT is ERC721URIStorage, AccessControl {
     
     uint256 private nextTokenId;
-    uint256 private cap;
     uint256 public totalSupply;
     uint256 public tokenBalanceRequired;
     IERC20 public token;
@@ -34,23 +33,20 @@ contract NFT is ERC721URIStorage, AccessControl {
     SupplyInfo public supplyInfo;
 
     struct NFTOwnerInfo {
-        string level;
+        uint256 level;
         bool hasNFT;
-
     }
 
     mapping(address => NFTOwnerInfo) public nftOwnerInfo;
 
     constructor(
         string memory _tokenURI, 
-        uint256 _initialCap, 
         IERC20 _tokenContract, 
         uint256 _setTokenBalanceRequired, 
         uint256 _setTxFee, 
         address _setVault
         ) ERC721("NewNFT", "NFT") {
         currentTokenURI = _tokenURI;
-        cap = _initialCap;
         token = _tokenContract;
         tokenBalanceRequired = _setTokenBalanceRequired;
         txFee = _setTxFee;
@@ -63,28 +59,17 @@ contract NFT is ERC721URIStorage, AccessControl {
         supplyInfo = SupplyInfo(50,100,200,0,0,0);
     }
 
-    function mintNFT() public returns (uint256) {
+    function mintGoldNFT() public returns (uint256) {
         require(token.balanceOf(_msgSender()) >= tokenBalanceRequired);
+        require(nftOwnerInfo[_msgSender()].hasNFT == false, "Can't mint more than one NFT");
         uint256 tokenId = ++nextTokenId;
         string memory newID = string.concat(currentTokenURI, hextool.toHex(hashUserAddress(tokenId)));
         _setTokenURI(tokenId, newID);
         _safeMint(_msgSender(), tokenId);
         totalSupply = ++totalSupply;
-        require(totalSupply <= cap,"NFT: Supply Cap");
-        return tokenId;
-    }
-
-    function mintGoldNFT() public returns (uint256) {
-        require(token.balanceOf(_msgSender()) >= tokenBalanceRequired);
-        require(nftOwnerInfo[_msgSender()].hasNFT == false, "Can't mint more than one NFT");
-        uint256 tokenId = ++nextTokenId;
-        string memory newID = string.concat(currentTokenURI, hextool.toHex(hashUserAddress2("GOLD", tokenId)));
-        _setTokenURI(tokenId, newID);
-        _safeMint(_msgSender(), tokenId);
-        totalSupply = ++totalSupply;
         ++supplyInfo.goldSupply;
         NFTOwnerInfo memory n = NFTOwnerInfo({
-            level: "GOLD",
+            level: 1, //1 Signifies Gold Level NFT
             hasNFT: true
         });
 
@@ -95,14 +80,15 @@ contract NFT is ERC721URIStorage, AccessControl {
 
     function mintSilverNFT() public returns (uint256) {
         require(token.balanceOf(_msgSender()) >= tokenBalanceRequired);
+        require(nftOwnerInfo[_msgSender()].hasNFT == false, "Can't mint more than one NFT");
         uint256 tokenId = ++nextTokenId;
-        string memory newID = string.concat(currentTokenURI, hextool.toHex(hashUserAddress2("SILVER", tokenId)));
+        string memory newID = string.concat(currentTokenURI, hextool.toHex(hashUserAddress(tokenId)));
         _setTokenURI(tokenId, newID);
         _safeMint(_msgSender(), tokenId);
         totalSupply = ++totalSupply;
         ++supplyInfo.silverSupply;
         NFTOwnerInfo memory n = NFTOwnerInfo({
-            level: "SILVER",
+            level: 2, //2 Signifies Silver Level NFT
             hasNFT: true
         });
 
@@ -113,14 +99,15 @@ contract NFT is ERC721URIStorage, AccessControl {
 
     function mintBronzeNFT() public returns (uint256) {
         require(token.balanceOf(_msgSender()) >= tokenBalanceRequired);
+        require(nftOwnerInfo[_msgSender()].hasNFT == false, "Can't mint more than one NFT");
         uint256 tokenId = ++nextTokenId;
-        string memory newID = string.concat(currentTokenURI, hextool.toHex(hashUserAddress2("BRONZE", tokenId)));
+        string memory newID = string.concat(currentTokenURI, hextool.toHex(hashUserAddress(tokenId)));
         _setTokenURI(tokenId, newID);
         _safeMint(_msgSender(), tokenId);
         ++totalSupply;
         ++supplyInfo.bronzeSupply;
         NFTOwnerInfo memory n = NFTOwnerInfo({
-            level: "BRONZE",
+            level: 3, //3 Signifies Bronze Level NFT
             hasNFT: true
         });
 
@@ -131,12 +118,19 @@ contract NFT is ERC721URIStorage, AccessControl {
     
     function burnNFT(uint256 tokenId) public {
         require(_msgSender() == _ownerOf(tokenId), "NFT: Not owner");
-
-        bytes32 ha = hashUserAddress2("GOLD", tokenId);
-        require(ha == hashUserAddress2("GOLD", tokenId), "Invalid hash check");
-
-        _update(address(0), tokenId, _msgSender());
-        supplyInfo.goldSupply--;
+        if (nftOwnerInfo[_msgSender()].level == 1) {
+            _update(address(0), tokenId, _msgSender());
+            --supplyInfo.goldSupply;
+        } else if (nftOwnerInfo[_msgSender()].level == 2) {
+            _update(address(0), tokenId, _msgSender());
+            --supplyInfo.silverSupply;
+        } else if (nftOwnerInfo[_msgSender()].level == 3) {
+            _update(address(0), tokenId, _msgSender());
+            --supplyInfo.bronzeSupply;
+        }
+        --totalSupply;
+        nftOwnerInfo[_msgSender()].level = 0;
+        nftOwnerInfo[_msgSender()].hasNFT = false;
     }
 
     function setURI(string memory newURI) public returns (string memory) {
@@ -178,13 +172,13 @@ contract NFT is ERC721URIStorage, AccessControl {
 }
 
     function _update(address to, uint256 tokenId, address from) internal virtual override(ERC721) returns (address) {
-        if (from == address(0)){
+        if (from == address(0) || to == address(0)){
             super._update(to, tokenId, from);
         } else if (from != address(0)) {
-            string memory lvl = nftOwnerInfo[_msgSender()].level;
+            uint256 lvl = nftOwnerInfo[_msgSender()].level;
             token.transferFrom(_msgSender(), vault, txFee);
             NFTOwnerInfo memory n = NFTOwnerInfo({
-            level: "",
+            level: 0,
             hasNFT: false
             });
 
@@ -206,12 +200,10 @@ contract NFT is ERC721URIStorage, AccessControl {
     }
 
     function moveERC20(IERC20 _ERC20, address _dest, uint _ERC20Amount) public {
-        //require(hasRole(_RESCUE, _msgSender()));
         IERC20(_ERC20).transfer(_dest, _ERC20Amount);
     }
 
     function ethRescue(address payable _dest, uint _etherAmount) public {
-        //require(hasRole(_RESCUE, _msgSender()));
         _dest.transfer(_etherAmount);
     }
     
