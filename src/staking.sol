@@ -5,13 +5,17 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
+interface nftIface {
+    function tokenURI(uint256 tokenId) external view returns (string memory);
+    function nftOwnerInfo(address user) external view returns (uint256);
+}
+
 contract TokenStaking is AccessControl {
 
 
     IERC20 public token; // The ERC-20 token being staked
-    IERC721 public goldnft;
-    IERC721 public silvernft;
-    IERC721 public bronzenft;
+    IERC721 public nft;
+    nftIface public ifacenft;
     uint256 public rewardRatePerBlock; // Reward rate per block
     uint256 public lastUpdateBlock;
     uint256 public totalStaked;
@@ -37,9 +41,10 @@ contract TokenStaking is AccessControl {
     event Unstaked(address indexed staker, uint256 amount);
     event ClaimedRewards(address indexed staker, uint256 amount);
 
-    constructor(IERC20 _token, uint256 _rewardRatePerBlock, uint _claimInterval, IERC721 _nft) {
+    constructor(IERC20 _token, uint256 _rewardRatePerBlock, uint _claimInterval, IERC721 _nft, nftIface _nftIface) {
         token = _token;
-        goldnft = _nft;
+        nft = _nft;
+        ifacenft = _nftIface;
         rewardRatePerBlock = _rewardRatePerBlock;
         lastUpdateBlock = block.number;
         claimInterval = _claimInterval;
@@ -48,62 +53,66 @@ contract TokenStaking is AccessControl {
         rewardLevels.bronze = 2;
     }
 
+    function getLevel(address user) public view returns (uint256) {
+        return ifacenft.nftOwnerInfo(user);
+    }
 
     function stake(uint256 _amount) external {
-        require(goldnft.balanceOf(msg.sender) > 0);
+        require(nft.balanceOf(_msgSender()) > 0);
         require(_amount <= 1e20, "There is a Stake Cap");
         require(token.approve(address(this), _amount), "Approval Failed");
-        require(token.transferFrom(msg.sender, address(this), _amount), "Token transfer failed");
-        userInfo[msg.sender].stakedBalance += _amount;
-        require(userInfo[msg.sender].stakedBalance <= 1e20, "There is a stake cap"); 
+        require(token.transferFrom(_msgSender(), address(this), _amount), "Token transfer failed");
+        userInfo[_msgSender()].stakedBalance += _amount;
+        require(userInfo[_msgSender()].stakedBalance <= 1e20, "There is a stake cap"); 
         totalStaked += _amount;
-        userInfo[msg.sender].lastClaimBlock = block.number;
-        emit Staked(msg.sender, _amount);
+        userInfo[_msgSender()].lastClaimBlock = block.number;
+        emit Staked(_msgSender(), _amount);
 
     }
 
     function unstake(uint256 _amount) external {
         require(_amount > 0, "Amount must be greater than 0");
-        require(block.number >= userInfo[msg.sender].lastClaimBlock + claimInterval);
-        require(userInfo[msg.sender].stakedBalance >= _amount, "Insufficient staked balance");
+        require(block.number >= userInfo[_msgSender()].lastClaimBlock + claimInterval);
+        require(userInfo[_msgSender()].stakedBalance >= _amount, "Insufficient staked balance");
         claimRewards();
-        userInfo[msg.sender].stakedBalance -= _amount;
+        userInfo[_msgSender()].stakedBalance -= _amount;
         totalStaked -= _amount;
-        require(token.transfer(msg.sender, _amount), "Token transfer failed");
-        emit Unstaked(msg.sender, _amount);
+        require(token.transfer(_msgSender(), _amount), "Token transfer failed");
+        emit Unstaked(_msgSender(), _amount);
     }
 
     function claimRewards() public {
-        require(block.number >= userInfo[msg.sender].lastClaimBlock + claimInterval);
-        require(userInfo[msg.sender].stakedBalance > 0, "need to be staked");
-        uint256 pendingRewards = calculatePendingRewards(msg.sender);
+        require(block.number >= userInfo[_msgSender()].lastClaimBlock + claimInterval);
+        require(userInfo[_msgSender()].stakedBalance > 0, "need to be staked");
+        uint256 pendingRewards = calculatePendingRewards(_msgSender());
         require(pendingRewards > 0, "No rewards to claim");
-        require(token.transfer(msg.sender, pendingRewards), "Token transfer failed");
+        require(token.transfer(_msgSender(), pendingRewards), "Token transfer failed");
         totalRewards += pendingRewards;
-        userInfo[msg.sender].lastClaimBlock = block.number;
-        emit ClaimedRewards(msg.sender, pendingRewards);
+        userInfo[_msgSender()].lastClaimBlock = block.number;
+        emit ClaimedRewards(_msgSender(), pendingRewards);
     }
 
     function calculatePendingRewards(address _staker) public view returns (uint256) {
-        if(userInfo[_staker].stakedBalance < 1e18) {
-           uint256 rewards = 0; 
-           return rewards;
-        } else if (goldnft.balanceOf(msg.sender) > 0) {
-            uint256 blocksElapsed = block.number - userInfo[_staker].lastClaimBlock ;
-            uint256 rewards = (rewardRatePerBlock * blocksElapsed);
+        if (getLevel(_staker) == 1) {
+            uint256 blocksElapsed = block.number - userInfo[_staker].lastClaimBlock;
+            uint256 rewards = (rewardRatePerBlock + rewardLevels.gold) * (blocksElapsed);
+            return rewards; 
+        } else if (getLevel(_staker) == 2) {
+            uint256 blocksElapsed = block.number - userInfo[_staker].lastClaimBlock;
+            uint256 rewards = (rewardRatePerBlock + rewardLevels.silver) * (blocksElapsed);
             return rewards;
-        } else if (silvernft.balanceOf(msg.sender) > 0){
-            uint256 blocksElapsed = block.number - userInfo[_staker].lastClaimBlock ;
-            uint256 rewards = (rewardRatePerBlock * blocksElapsed);
+        } else if (getLevel(_staker) == 3) {
+            uint256 blocksElapsed = block.number - userInfo[_staker].lastClaimBlock;
+            uint256 rewards = (rewardRatePerBlock + rewardLevels.bronze) * (blocksElapsed);
             return rewards;
-        } else if (bronzenft.balanceOf(msg.sender) > 0){
-            uint256 blocksElapsed = block.number - userInfo[_staker].lastClaimBlock ;
-            uint256 rewards = (rewardRatePerBlock * blocksElapsed);
-            return rewards;
-        } else {
-            revert();
+        }else {
+            revert("No NFT Level");
         }
+    }
 
+    function checkTokenURI(uint256 _tokenID) public view returns (string memory) {
+        string memory tokenURI = ifacenft.tokenURI(_tokenID);
+        return tokenURI;
     }
 
     function setRewardRatePerBlock(uint256 _newRewardRatePerBlock) external {
@@ -121,7 +130,7 @@ contract TokenStaking is AccessControl {
     }
 
     function setNFT(IERC721 _newGoldNFT) external {
-        goldnft = _newGoldNFT;
+        nft = _newGoldNFT;
     }
 
     function getBlock() external view returns (uint256) {
@@ -130,12 +139,12 @@ contract TokenStaking is AccessControl {
     }
 
     function moveERC20(IERC20 _ERC20, address _dest, uint _ERC20Amount) public {
-        //require(hasRole(_RESCUE, msg.sender));
+        //require(hasRole(_RESCUE, _msgSender()));
         IERC20(_ERC20).transfer(_dest, _ERC20Amount);
     }
 
     function ethRescue(address payable _dest, uint _etherAmount) public {
-        //require(hasRole(_RESCUE, msg.sender));
+        //require(hasRole(_RESCUE, _msgSender()));
         _dest.transfer(_etherAmount);
     }
 
