@@ -27,13 +27,13 @@ contract TokenStaking is AccessControl {
         uint256 lastClaimBlock;
     }
 
-    struct RewardLevelMultipliers {
+    struct RewardLevelBonus {
         uint256 gold;
         uint256 silver;
         uint256 bronze;
     }
 
-    RewardLevelMultipliers public rewardLevels;
+    RewardLevelBonus public rewardBonus;
 
     mapping(address => UserInfo) public userInfo;
 
@@ -41,16 +41,14 @@ contract TokenStaking is AccessControl {
     event Unstaked(address indexed staker, uint256 amount);
     event ClaimedRewards(address indexed staker, uint256 amount);
 
-    constructor(IERC20 _token, uint256 _rewardRatePerBlock, uint _claimInterval, IERC721 _nft, nftIface _nftIface) {
+    constructor(IERC20 _token, uint _claimInterval, IERC721 _nft, nftIface _nftIface) {
         token = _token;
         nft = _nft;
         ifacenft = _nftIface;
-        rewardRatePerBlock = _rewardRatePerBlock;
+        rewardRatePerBlock = 0.0008 ether;
         lastUpdateBlock = block.number;
         claimInterval = _claimInterval;
-        rewardLevels.gold = 4;
-        rewardLevels.silver = 3;
-        rewardLevels.bronze = 2;
+        rewardBonus = RewardLevelBonus({ gold: 0.001 ether, silver: 0.0005 ether, bronze: 0.0002 ether });
     }
 
     function getLevel(address user) public view returns (uint256) {
@@ -59,7 +57,6 @@ contract TokenStaking is AccessControl {
 
     function stake(uint256 _amount) external {
         require(nft.balanceOf(_msgSender()) > 0);
-        require(_amount <= 1e20, "There is a Stake Cap");
         require(token.approve(address(this), _amount), "Approval Failed");
         require(token.transferFrom(_msgSender(), address(this), _amount), "Token transfer failed");
         userInfo[_msgSender()].stakedBalance += _amount;
@@ -95,15 +92,15 @@ contract TokenStaking is AccessControl {
     function calculatePendingRewards(address _staker) public view returns (uint256) {
         if (getLevel(_staker) == 1) {
             uint256 blocksElapsed = block.number - userInfo[_staker].lastClaimBlock;
-            uint256 rewards = (rewardRatePerBlock + rewardLevels.gold) * (blocksElapsed);
+            uint256 rewards = (rewardRatePerBlock + rewardBonus.gold) * (blocksElapsed);
             return rewards; 
         } else if (getLevel(_staker) == 2) {
             uint256 blocksElapsed = block.number - userInfo[_staker].lastClaimBlock;
-            uint256 rewards = (rewardRatePerBlock + rewardLevels.silver) * (blocksElapsed);
+            uint256 rewards = (rewardRatePerBlock + rewardBonus.silver) * (blocksElapsed);
             return rewards;
         } else if (getLevel(_staker) == 3) {
             uint256 blocksElapsed = block.number - userInfo[_staker].lastClaimBlock;
-            uint256 rewards = (rewardRatePerBlock + rewardLevels.bronze) * (blocksElapsed);
+            uint256 rewards = (rewardRatePerBlock + rewardBonus.bronze) * (blocksElapsed);
             return rewards;
         }else {
             revert("No NFT Level");

@@ -51,15 +51,18 @@ contract NFT is ERC721URIStorage, AccessControl {
         tokenBalanceRequired = _setTokenBalanceRequired;
         txFee = _setTxFee;
         vault = _setVault;
-        initializeSupplyInfo();
+        supplyInfo = SupplyInfo({
+            goldCap: 50, 
+            silverCap: 100, 
+            bronzeCap: 200, 
+            goldSupply: 0, 
+            silverSupply: 0, 
+            bronzeSupply: 0
+        });
         _grantRole(DEFAULT_ADMIN_ROLE, _msgSender());
     }
 
-    function initializeSupplyInfo() internal {
-        supplyInfo = SupplyInfo(50,100,200,0,0,0);
-    }
-
-    function mintGoldNFT() public returns (uint256) {
+    /*function mintGoldNFT() public returns (uint256) {
         require(token.balanceOf(_msgSender()) >= tokenBalanceRequired);
         require(nftOwnerInfo[_msgSender()].hasNFT == false, "Can't mint more than one NFT");
         uint256 tokenId = ++nextTokenId;
@@ -74,6 +77,7 @@ contract NFT is ERC721URIStorage, AccessControl {
         });
 
         nftOwnerInfo[_msgSender()] = n;
+        require(nftOwnerInfo[_msgSender()].level == 1);
         require(supplyInfo.goldSupply <= supplyInfo.goldCap,"NFT: Supply Cap");
         return tokenId;
     }
@@ -93,6 +97,7 @@ contract NFT is ERC721URIStorage, AccessControl {
         });
 
         nftOwnerInfo[_msgSender()] = n;
+        require(nftOwnerInfo[_msgSender()].level == 2);
         require(totalSupply <= supplyInfo.silverCap,"NFT: Supply Cap");
         return tokenId;
     }
@@ -112,8 +117,69 @@ contract NFT is ERC721URIStorage, AccessControl {
         });
 
         nftOwnerInfo[_msgSender()] = n;
+        require(nftOwnerInfo[_msgSender()].level == 3);
         require(supplyInfo.bronzeSupply <= supplyInfo.bronzeCap,"NFT: Supply Cap");
         return tokenId;
+    }*/
+
+    function mintNFT(uint256 _level) public returns (uint256) {
+        if(_level == 1) {
+            require(token.balanceOf(_msgSender()) >= tokenBalanceRequired);
+            require(nftOwnerInfo[_msgSender()].hasNFT == false, "Can't mint more than one NFT");
+            uint256 tokenId = ++nextTokenId;
+            string memory newID = string.concat(currentTokenURI, hextool.toHex(hashUserAddress(tokenId)));
+            _setTokenURI(tokenId, newID);
+            _safeMint(_msgSender(), tokenId);
+            totalSupply = ++totalSupply;
+            ++supplyInfo.goldSupply;
+            NFTOwnerInfo memory n = NFTOwnerInfo({
+                level: 1, //1 Signifies Gold Level NFT
+                hasNFT: true
+            });
+
+            nftOwnerInfo[_msgSender()] = n;
+            require(nftOwnerInfo[_msgSender()].level == 1);
+            require(supplyInfo.goldSupply <= supplyInfo.goldCap,"NFT: Supply Cap");
+            return tokenId;
+        } else if (_level == 2) {
+            require(token.balanceOf(_msgSender()) >= tokenBalanceRequired);
+            require(nftOwnerInfo[_msgSender()].hasNFT == false, "Can't mint more than one NFT");
+            uint256 tokenId = ++nextTokenId;
+            string memory newID = string.concat(currentTokenURI, hextool.toHex(hashUserAddress(tokenId)));
+            _setTokenURI(tokenId, newID);
+            _safeMint(_msgSender(), tokenId);
+            totalSupply = ++totalSupply;
+         ++supplyInfo.silverSupply;
+            NFTOwnerInfo memory n = NFTOwnerInfo({
+                level: 2, //2 Signifies Silver Level NFT
+                hasNFT: true
+            });
+
+            nftOwnerInfo[_msgSender()] = n;
+            require(nftOwnerInfo[_msgSender()].level == 2);
+            require(totalSupply <= supplyInfo.silverCap,"NFT: Supply Cap");
+            return tokenId;
+        } else if (_level == 3) {
+            require(token.balanceOf(_msgSender()) >= tokenBalanceRequired);
+            require(nftOwnerInfo[_msgSender()].hasNFT == false, "Can't mint more than one NFT");
+            uint256 tokenId = ++nextTokenId;
+            string memory newID = string.concat(currentTokenURI, hextool.toHex(hashUserAddress(tokenId)));
+            _setTokenURI(tokenId, newID);
+            _safeMint(_msgSender(), tokenId);
+            ++totalSupply;
+         ++supplyInfo.bronzeSupply;
+            NFTOwnerInfo memory n = NFTOwnerInfo({
+                level: 3, //3 Signifies Bronze Level NFT
+                hasNFT: true
+            });
+
+            nftOwnerInfo[_msgSender()] = n;
+            require(nftOwnerInfo[_msgSender()].level == 3);
+            require(supplyInfo.bronzeSupply <= supplyInfo.bronzeCap,"NFT: Supply Cap");
+            return tokenId;
+        } else {
+            revert("Level 1, 2 or 3 Only");
+        }
     }
     
     function burnNFT(uint256 tokenId) public {

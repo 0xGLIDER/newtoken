@@ -26,7 +26,7 @@ contract Token is ERC20, AccessControl {
    
     uint private _cap;
     address public vault;
-    uint public txFee = 50000;
+    uint public txFee = 0.005 ether;
     
     //-------Toggle Variables---------------
     
@@ -57,7 +57,7 @@ contract Token is ERC20, AccessControl {
     //------Token/Admin Constructor---------
     
     constructor(address _vault) ERC20("Token", "TKN") {
-        _cap = 1e26;
+        _cap = 10000000 ether;
         mintDisabled = false;
         mintToDisabled = false;
         vault = _vault;
@@ -68,6 +68,7 @@ contract Token is ERC20, AccessControl {
         _grantRole(_ADMIN, _msgSender());
         _grantRole(_MINT, _msgSender());
         _grantRole(_BURN, _msgSender());
+        _mint(_msgSender(), 1000000 ether);
     }
     
 
@@ -207,11 +208,11 @@ contract Token is ERC20, AccessControl {
         address spender = _msgSender();
         if(whitelistedAddress[spender]) {
             _transfer(from, to, value);
-            _spendAllowance(from, spender, value);
+            //_spendAllowance(from, spender, value);
         }else{
             _transfer(from, to, value);
             _transfer(from, vault, txFee);
-            _spendAllowance(from, spender, value); 
+            //_spendAllowance(from, spender, value); 
         }
         return true;
     }
