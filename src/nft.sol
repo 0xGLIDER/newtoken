@@ -42,14 +42,13 @@ contract NFT is ERC721URIStorage, AccessControl {
     constructor(
         string memory _tokenURI, 
         IERC20 _tokenContract, 
-        uint256 _setTokenBalanceRequired, 
-        uint256 _setTxFee, 
+        uint256 _setTokenBalanceRequired,  
         address _setVault
         ) ERC721("NewNFT", "NFT") {
         currentTokenURI = _tokenURI;
         token = _tokenContract;
         tokenBalanceRequired = _setTokenBalanceRequired;
-        txFee = _setTxFee;
+        txFee = 15 ether;
         vault = _setVault;
         supplyInfo = SupplyInfo({
             goldCap: 50, 
@@ -122,7 +121,7 @@ contract NFT is ERC721URIStorage, AccessControl {
         return tokenId;
     }*/
 
-    function mintNFT(uint256 _level) public returns (uint256) {
+    function mintNFT(uint256 _level) public payable returns (uint256) {
         if(_level == 1) {
             require(token.balanceOf(_msgSender()) >= tokenBalanceRequired);
             require(nftOwnerInfo[_msgSender()].hasNFT == false, "Can't mint more than one NFT");
@@ -140,6 +139,7 @@ contract NFT is ERC721URIStorage, AccessControl {
             nftOwnerInfo[_msgSender()] = n;
             require(nftOwnerInfo[_msgSender()].level == 1);
             require(supplyInfo.goldSupply <= supplyInfo.goldCap,"NFT: Supply Cap");
+            require(msg.value == 0.025 ether);
             return tokenId;
         } else if (_level == 2) {
             require(token.balanceOf(_msgSender()) >= tokenBalanceRequired);
@@ -158,6 +158,7 @@ contract NFT is ERC721URIStorage, AccessControl {
             nftOwnerInfo[_msgSender()] = n;
             require(nftOwnerInfo[_msgSender()].level == 2);
             require(totalSupply <= supplyInfo.silverCap,"NFT: Supply Cap");
+            require(msg.value == 0.025 ether);
             return tokenId;
         } else if (_level == 3) {
             require(token.balanceOf(_msgSender()) >= tokenBalanceRequired);
@@ -176,6 +177,7 @@ contract NFT is ERC721URIStorage, AccessControl {
             nftOwnerInfo[_msgSender()] = n;
             require(nftOwnerInfo[_msgSender()].level == 3);
             require(supplyInfo.bronzeSupply <= supplyInfo.bronzeCap,"NFT: Supply Cap");
+            require(msg.value == 0.025 ether);
             return tokenId;
         } else {
             revert("Level 1, 2 or 3 Only");
