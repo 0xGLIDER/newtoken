@@ -8,8 +8,9 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {ERC721URIStorage} from "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import {hextool} from "./hex.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-contract NFT is ERC721URIStorage, AccessControl {
+contract NFT is ERC721URIStorage, AccessControl, ReentrancyGuard {
     
     uint256 private nextTokenId;
     uint256 public totalSupply;
@@ -77,7 +78,7 @@ contract NFT is ERC721URIStorage, AccessControl {
         _grantRole(DEFAULT_ADMIN_ROLE, _msgSender());
     }
 
-    function mintNFT(uint256 _level) public payable returns (uint256) {
+    function mintNFT(uint256 _level) nonReentrant public payable returns (uint256) {
         require(_level >= 1 && _level <= 3, "Invalid level");
         require(!nftOwnerInfo[_msgSender()].hasNFT, "Can't mint more than one NFT");
     
@@ -112,7 +113,7 @@ contract NFT is ERC721URIStorage, AccessControl {
     }
 
     
-    function burnNFT(uint256 tokenId) public {
+    function burnNFT(uint256 tokenId) nonReentrant public {
         require(_msgSender() == _ownerOf(tokenId), "NFT: Not owner");
         if (nftOwnerInfo[_msgSender()].level == 1) {
             _update(address(0), tokenId, _msgSender());
@@ -173,7 +174,7 @@ contract NFT is ERC721URIStorage, AccessControl {
     return keccak256(abi.encodePacked(msg.sender, _level, _eid));
 }
 
-    function _update(address to, uint256 tokenId, address from) internal virtual override(ERC721) returns (address) {
+    function _update(address to, uint256 tokenId, address from) nonReentrant internal virtual override(ERC721) returns (address) {
         if (from == address(0) || to == address(0)){
             super._update(to, tokenId, from);
         } else if (from != address(0)) {
@@ -201,11 +202,11 @@ contract NFT is ERC721URIStorage, AccessControl {
         return super.supportsInterface(interfaceId);
     }
 
-    function moveERC20(IERC20 _ERC20, address _dest, uint _ERC20Amount) public {
+    function moveERC20(IERC20 _ERC20, address _dest, uint _ERC20Amount) nonReentrant public {
         IERC20(_ERC20).transfer(_dest, _ERC20Amount);
     }
 
-    function ethRescue(address payable _dest, uint _etherAmount) public {
+    function ethRescue(address payable _dest, uint _etherAmount) nonReentrant public {
         _dest.transfer(_etherAmount);
     }
     
