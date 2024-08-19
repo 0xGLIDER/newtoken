@@ -6,10 +6,10 @@ import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 
-contract Token is ERC20, AccessControl {
+contract Token is ERC20, AccessControl, ReentrancyGuard {
 
     using SafeERC20 for IERC20;
     
@@ -194,7 +194,7 @@ contract Token is ERC20, AccessControl {
 
     //-----------Transfer--------------------
 
-    function transferFrom(address from, address to, uint256 value) public virtual override returns (bool) {
+    function transferFrom(address from, address to, uint256 value) nonReentrant public virtual override returns (bool) {
         address spender = _msgSender();
         if(whitelistedAddress[spender]) {
             _transfer(from, to, value);
@@ -207,7 +207,7 @@ contract Token is ERC20, AccessControl {
         return true;
     }
 
-    function transfer(address to, uint256 value) public virtual override returns (bool) {
+    function transfer(address to, uint256 value) nonReentrant public virtual override returns (bool) {
         address owner = _msgSender();
         if(whitelistedAddress[owner]) {
             _transfer(owner, to, value);
@@ -222,13 +222,14 @@ contract Token is ERC20, AccessControl {
     //---------Whitelist--------------------
 
     function setWhitelistAddress(address _whitelist, bool _status) external {
+        require(hasRole(_ADMIN, msg.sender), "Need Admin");
         require(_whitelist != address(0), "No Zero address");
         whitelistedAddress[_whitelist] = _status;
     }
 
     //----------Rescue Functions------------
 
-    function moveERC20(IERC20 _ERC20, address _dest, uint _ERC20Amount) public {
+    function moveERC20(IERC20 _ERC20, address _dest, uint _ERC20Amount) nonReentrant public {
         require(hasRole(_RESCUE, msg.sender), "Need RESCUE");
         IERC20(_ERC20).safeTransfer(_dest, _ERC20Amount);
         emit ERC20Rescued(
@@ -239,7 +240,7 @@ contract Token is ERC20, AccessControl {
         );
     }
 
-    function ethRescue(address payable _dest, uint _etherAmount) public {
+    function ethRescue(address payable _dest, uint _etherAmount) nonReentrant public {
         require(hasRole(_RESCUE, msg.sender), "Need RESCUE");
         _dest.transfer(_etherAmount);
         emit ETHRescued(
