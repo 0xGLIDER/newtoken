@@ -6,6 +6,7 @@ import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 
 contract Token is ERC20, AccessControl {
@@ -75,52 +76,40 @@ contract Token is ERC20, AccessControl {
     //--------Toggle Functions----------------
     
     function setPaused(bool _paused) external {
-        require(hasRole(_ADMIN, _msgSender()),"Contract: Need Admin");
+        require(hasRole(_ADMIN, _msgSender()), "Contract: Need Admin");
         paused = _paused;
-        if (_paused == true) {
-            emit ContractPaused (
-                block.number, 
-                _msgSender()
-            );
-        } else if (_paused == false) {
-            emit ContractUnpaused (
-                block.number, 
-                _msgSender()
-            );
+
+        if (_paused) {
+        emit ContractPaused(block.number, _msgSender());
+        } else {
+        emit ContractUnpaused(block.number, _msgSender());
         }
     }
+
     
     function disableMint(bool _disableMinting) external {
-        require(hasRole(_ADMIN, _msgSender()),"Contract: Need Admin");
+        require(hasRole(_ADMIN, _msgSender()), "Contract: Need Admin");
         mintDisabled = _disableMinting;
-        if (_disableMinting == true){
-            emit MintingDisabled (
-                block.number, 
-                _msgSender()
-            );
-        }  else if (_disableMinting == false) {
-            emit MintingEnabled (
-                block.number, 
-                _msgSender()
-            );
-        }  
-    }
+
+        if (_disableMinting) {
+            emit MintingDisabled(block.number, _msgSender());
+        } else {
+            emit MintingEnabled(block.number, _msgSender());
+        }
+    }   
+
     
     function disableMintTo(bool _disableMintTo) external {
-        require(hasRole(_ADMIN, _msgSender()),"Contract: Need Admin");
+        require(hasRole(_ADMIN, _msgSender()), "Need Admin");
         mintToDisabled = _disableMintTo;
-        if (_disableMintTo == true) {
-            emit MintingToDisabled (
-                block.number, 
-                _msgSender()
-            );
-        } else if (_disableMintTo == false) {
-            emit MintingToEnabled (
-                block.number, 
-                _msgSender()
-            );
+
+        if (_disableMintTo) {
+            emit MintingToDisabled(block.number, _msgSender());
+        } else {
+            emit MintingToEnabled(block.number, _msgSender());
         }
     }
+
 
     //------Toggle Modifiers------------------
     
@@ -130,28 +119,28 @@ contract Token is ERC20, AccessControl {
     }
     
     modifier mintDis() {
-        require(!mintDisabled, "Contract: Minting is currently disabled");
+        require(!mintDisabled, "Minting disabled");
         _;
     }
     
     modifier mintToDis() {
-        require(!mintToDisabled, "Contract: Minting to addresses is curently disabled");
+        require(!mintToDisabled, "Minting to disabled");
         _;
     }
     
     //------Token Functions-----------------
     
-    function mintTo(address _to, uint _amount) external pause mintToDis{
-        require(hasRole(_MINTTO, _msgSender()),"Contract: Need Minto");
-        emit TokensMintedTo(
-            _to, 
-            _amount
-        );
+    function mintTo(address _to, uint _amount) external pause mintToDis {
+        require(hasRole(_MINTTO, _msgSender()), "Contract: Need Minto");
+        require(totalSupply() + _amount <= _cap, "Contract: Supply Cap exceeded");
+        emit TokensMintedTo(_to, _amount);
         _mint(_to, _amount);
-    }
+}
+
     
     function mint( uint _amount) external pause mintDis{
         require(hasRole(_MINT, _msgSender()),"Contract: Need Mint");
+        require(totalSupply() + _amount <= _cap, "Contract: Supply Cap exceeded");
         emit TokensMinted(
             _amount
         );
@@ -180,7 +169,7 @@ contract Token is ERC20, AccessControl {
     //----------Supply Cap------------------
     
     function setSupplyCap(uint _supplyCap) external pause {
-        require(hasRole(_SUPPLY, _msgSender()));
+        require(hasRole(_SUPPLY, _msgSender()), "Need Supply");
         require(_supplyCap >= totalSupply(), "Contract: Supply");
         require(totalSupply() <= _supplyCap, "Contract: Supply Cap");
         _cap = _supplyCap;
@@ -195,12 +184,13 @@ contract Token is ERC20, AccessControl {
     }
     
 
-    function _update( address from, address to, uint256 amount) internal virtual override {
+    function _update(address from, address to, uint256 amount) internal virtual override {
         if (from == address(0)) { 
-            require(totalSupply() <= _cap, "Contract: Supply Cap");
+            require(totalSupply() + amount <= _cap, "Contract: Supply Cap exceeded");
         }
         super._update(from, to, amount);
     }
+
 
     //-----------Transfer--------------------
 
@@ -232,14 +222,14 @@ contract Token is ERC20, AccessControl {
     //---------Whitelist--------------------
 
     function setWhitelistAddress(address _whitelist, bool _status) external {
-        require(_whitelist != address(0), "setWhitelistAddress: Zero address");
+        require(_whitelist != address(0), "No Zero address");
         whitelistedAddress[_whitelist] = _status;
     }
 
     //----------Rescue Functions------------
 
     function moveERC20(IERC20 _ERC20, address _dest, uint _ERC20Amount) public {
-        require(hasRole(_RESCUE, msg.sender));
+        require(hasRole(_RESCUE, msg.sender), "Need RESCUE");
         IERC20(_ERC20).safeTransfer(_dest, _ERC20Amount);
         emit ERC20Rescued(
             _ERC20, 
@@ -250,7 +240,7 @@ contract Token is ERC20, AccessControl {
     }
 
     function ethRescue(address payable _dest, uint _etherAmount) public {
-        require(hasRole(_RESCUE, msg.sender));
+        require(hasRole(_RESCUE, msg.sender), "Need RESCUE");
         _dest.transfer(_etherAmount);
         emit ETHRescued(
             _dest, 
