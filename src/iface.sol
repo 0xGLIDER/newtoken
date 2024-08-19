@@ -8,4 +8,6 @@ interface iface {
 
     function burnFrom(address _from, uint _amount) external;
 
+    function mintTo(address _to, uint _amount) external;
+
 }
