@@ -60,16 +60,30 @@ contract TokenStaking is AccessControl, ReentrancyGuard {
     }
 
     function stake(uint256 _amount) external {
-        require(nft.balanceOf(_msgSender()) > 0);
-        require(token.approve(address(this), _amount), "Approval Failed");
-        require(token.transferFrom(_msgSender(), address(this), _amount), "Token transfer failed");
-        userInfo[_msgSender()].stakedBalance += _amount;
-        require(userInfo[_msgSender()].stakedBalance <= 1e20, "There is a stake cap"); 
-        totalStaked += _amount;
-        userInfo[_msgSender()].lastClaimBlock = block.number;
-        emit Staked(_msgSender(), _amount);
+        require(_amount > 0, "Staking: Amount must be greater than 0");
+        require(nft.balanceOf(_msgSender()) > 0, "Staking: No NFT balance");
 
+        // Approve the staking contract to spend tokens on behalf of the user
+        require(token.approve(address(this), _amount), "Staking: Approval failed");
+
+        // Transfer tokens from sender to the contract
+        require(token.transferFrom(_msgSender(), address(this), _amount), "Staking: Token transfer failed");
+
+        // Retrieve user info from storage
+        UserInfo storage user = userInfo[_msgSender()];
+
+        // Update user's staked balance and total staked
+        user.stakedBalance += _amount;
+        require(user.stakedBalance <= 1e20, "Staking: Exceeds stake cap"); 
+
+        totalStaked += _amount;
+
+        // Update user's last claim block
+        user.lastClaimBlock = block.number;
+
+        emit Staked(_msgSender(), _amount);
     }
+
 
     function unstake(uint256 _amount) external {
         UserInfo storage user = userInfo[_msgSender()];
@@ -105,22 +119,25 @@ contract TokenStaking is AccessControl, ReentrancyGuard {
     }
 
     function calculatePendingRewards(address _staker) public view returns (uint256) {
-        if (getLevel(_staker) == 1) {
-            uint256 blocksElapsed = block.number - userInfo[_staker].lastClaimBlock;
-            uint256 rewards = (rewardRatePerBlock + rewardBonus.gold) * (blocksElapsed);
-            return rewards; 
-        } else if (getLevel(_staker) == 2) {
-            uint256 blocksElapsed = block.number - userInfo[_staker].lastClaimBlock;
-            uint256 rewards = (rewardRatePerBlock + rewardBonus.silver) * (blocksElapsed);
-            return rewards;
-        } else if (getLevel(_staker) == 3) {
-            uint256 blocksElapsed = block.number - userInfo[_staker].lastClaimBlock;
-            uint256 rewards = (rewardRatePerBlock + rewardBonus.bronze) * (blocksElapsed);
-            return rewards;
-        }else {
+        uint256 level = getLevel(_staker);
+        uint256 rewardBonusLevel;
+
+        if (level == 1) {
+            rewardBonusLevel = rewardBonus.gold;
+        } else if (level == 2) {
+            rewardBonusLevel = rewardBonus.silver;
+        } else if (level == 3) {
+            rewardBonusLevel = rewardBonus.bronze;
+        } else {
             revert("No NFT Level");
         }
+
+        uint256 blocksElapsed = block.number - userInfo[_staker].lastClaimBlock;
+        uint256 rewards = (rewardRatePerBlock + rewardBonusLevel) * blocksElapsed;
+    
+        return rewards;
     }
+
 
     function checkTokenURI(uint256 _tokenID) public view returns (string memory) {
         string memory tokenURI = ifacenft.tokenURI(_tokenID);
