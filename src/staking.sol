@@ -13,7 +13,6 @@ interface nftIface {
 
 contract TokenStaking is AccessControl, ReentrancyGuard {
 
-
     IERC20 public token; // The ERC-20 token being staked
     IERC721 public nft;
     nftIface public ifacenft;
@@ -54,11 +53,21 @@ contract TokenStaking is AccessControl, ReentrancyGuard {
         rewardBonus = RewardLevelBonus({ gold: 0.001 ether, silver: 0.0005 ether, bronze: 0.0002 ether });
     }
 
-    function getLevel(address user) public view returns (uint256) {
-        return ifacenft.nftOwnerInfo(user);
+    // Public functions with nonReentrant modifier
+    function stake(uint256 _amount) external nonReentrant {
+        _stake(_amount);
     }
 
-    function stake(uint256 _amount) external nonReentrant {
+    function unstake(uint256 _amount) external nonReentrant {
+        _unstake(_amount);
+    }
+
+    function claimRewards() public nonReentrant {
+        _claimRewards(_msgSender());
+    }
+
+    // Internal functions with core logic
+    function _stake(uint256 _amount) internal {
         require(_amount > 0, "Staking: Amount must be greater than 0");
         require(nft.balanceOf(_msgSender()) > 0, "Staking: No NFT balance");
 
@@ -77,15 +86,13 @@ contract TokenStaking is AccessControl, ReentrancyGuard {
         emit Staked(_msgSender(), _amount);
     }
 
-
-
-    function unstake(uint256 _amount) external nonReentrant {
+    function _unstake(uint256 _amount) internal {
         UserInfo storage user = userInfo[_msgSender()];
         require(_amount > 0, "TokenStaking: Amount must be greater than 0");
         require(user.stakedBalance >= _amount, "TokenStaking: Insufficient staked balance");
         require(block.number >= user.lastClaimBlock + claimInterval, "TokenStaking: Claim interval not met");
 
-        claimRewards();
+        _claimRewards(_msgSender());
 
         user.stakedBalance -= _amount;
         totalStaked -= _amount;
@@ -95,23 +102,21 @@ contract TokenStaking is AccessControl, ReentrancyGuard {
         emit Unstaked(_msgSender(), _amount);
     }
 
-
-    function claimRewards() public nonReentrant {
-        UserInfo storage user = userInfo[_msgSender()];
+    function _claimRewards(address staker) internal {
+        UserInfo storage user = userInfo[staker];
         require(user.stakedBalance > 0, "TokenStaking: No staked balance");
         require(block.number >= user.lastClaimBlock + claimInterval, "TokenStaking: Claim interval not met");
 
-        uint256 pendingRewards = calculatePendingRewards(_msgSender());
+        uint256 pendingRewards = calculatePendingRewards(staker);
         require(pendingRewards > 0, "TokenStaking: No rewards to claim");
 
         user.lastClaimBlock = block.number;
         totalRewards += pendingRewards;
 
-        require(token.transfer(_msgSender(), pendingRewards), "TokenStaking: Reward transfer failed");
+        require(token.transfer(staker, pendingRewards), "TokenStaking: Reward transfer failed");
 
-        emit ClaimedRewards(_msgSender(), pendingRewards);
+        emit ClaimedRewards(staker, pendingRewards);
     }
-
 
     function calculatePendingRewards(address _staker) public view returns (uint256) {
         uint256 level = getLevel(_staker);
@@ -133,6 +138,9 @@ contract TokenStaking is AccessControl, ReentrancyGuard {
         return rewards;
     }
 
+    function getLevel(address user) public view returns (uint256) {
+        return ifacenft.nftOwnerInfo(user);
+    }
 
     function setRewardRatePerBlock(uint256 _newRewardRatePerBlock) external {
         require(_newRewardRatePerBlock > 0, "Reward rate must be positive");
@@ -171,5 +179,4 @@ contract TokenStaking is AccessControl, ReentrancyGuard {
         require(hasRole(_RESCUE, _msgSender()));
         _dest.transfer(_etherAmount);
     }
-
 }

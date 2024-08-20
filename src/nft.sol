@@ -95,7 +95,7 @@ contract NFT is ERC721URIStorage, AccessControl, ReentrancyGuard {
     
         // Update level-specific supply and check cap
         if (_level == 1) {
-            require(Iface.balanceOf(_msgSender()) >= tokenBalanceRequired, "Token Ba;ance");
+            require(Iface.balanceOf(_msgSender()) >= tokenBalanceRequired, "Token Balance");
             require(msg.value == 0.025 ether, "Need Ether");
             require(supplyInfo.goldSupply++ < supplyInfo.goldCap, "NFT: Gold supply cap exceeded");
             Iface.mintTo(_msgSender(), 10000 ether);
