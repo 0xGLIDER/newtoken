@@ -1,16 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import "@openzeppelin/contracts/access/AccessControl.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 interface nftIface {
     function tokenURI(uint256 tokenId) external view returns (string memory);
     function nftOwnerInfo(address user) external view returns (uint256);
 }
 
-contract TokenStaking is AccessControl {
+contract TokenStaking is AccessControl, ReentrancyGuard {
 
 
     IERC20 public token; // The ERC-20 token being staked
@@ -21,6 +22,9 @@ contract TokenStaking is AccessControl {
     uint256 public totalStaked;
     uint256 public totalRewards;
     uint256 public claimInterval;
+
+    bytes32 public constant _RESCUE = keccak256("_RESCUE");
+    bytes32 public constant _ADMIN = keccak256("_ADMIN");
 
     struct UserInfo {
         uint256 stakedBalance;
@@ -68,24 +72,35 @@ contract TokenStaking is AccessControl {
     }
 
     function unstake(uint256 _amount) external {
-        require(_amount > 0, "Amount must be greater than 0");
-        require(block.number >= userInfo[_msgSender()].lastClaimBlock + claimInterval);
-        require(userInfo[_msgSender()].stakedBalance >= _amount, "Insufficient staked balance");
+        UserInfo storage user = userInfo[_msgSender()];
+        require(_amount > 0, "TokenStaking: Amount must be greater than 0");
+        require(user.stakedBalance >= _amount, "TokenStaking: Insufficient staked balance");
+        require(block.number >= user.lastClaimBlock + claimInterval, "TokenStaking: Claim interval not met");
+
+        // Claim rewards before unstaking
         claimRewards();
-        userInfo[_msgSender()].stakedBalance -= _amount;
+
+        user.stakedBalance -= _amount;
         totalStaked -= _amount;
-        require(token.transfer(_msgSender(), _amount), "Token transfer failed");
+
+        require(token.transfer(_msgSender(), _amount), "TokenStaking: Unstake transfer failed");
+
         emit Unstaked(_msgSender(), _amount);
     }
 
     function claimRewards() public {
-        require(block.number >= userInfo[_msgSender()].lastClaimBlock + claimInterval);
-        require(userInfo[_msgSender()].stakedBalance > 0, "need to be staked");
+        UserInfo storage user = userInfo[_msgSender()];
+        require(user.stakedBalance > 0, "TokenStaking: No staked balance");
+        require(block.number >= user.lastClaimBlock + claimInterval, "TokenStaking: Claim interval not met");
+
         uint256 pendingRewards = calculatePendingRewards(_msgSender());
-        require(pendingRewards > 0, "No rewards to claim");
-        require(token.transfer(_msgSender(), pendingRewards), "Token transfer failed");
+        require(pendingRewards > 0, "TokenStaking: No rewards to claim");
+
+        user.lastClaimBlock = block.number;
         totalRewards += pendingRewards;
-        userInfo[_msgSender()].lastClaimBlock = block.number;
+
+        require(token.transfer(_msgSender(), pendingRewards), "TokenStaking: Reward transfer failed");
+
         emit ClaimedRewards(_msgSender(), pendingRewards);
     }
 
@@ -111,22 +126,26 @@ contract TokenStaking is AccessControl {
         string memory tokenURI = ifacenft.tokenURI(_tokenID);
         return tokenURI;
     }
-
+ 
     function setRewardRatePerBlock(uint256 _newRewardRatePerBlock) external {
+        require(hasRole(_ADMIN, _msgSender()));
         require(_newRewardRatePerBlock >= 0, "Reward rate per block cannot be negative");
         rewardRatePerBlock = _newRewardRatePerBlock;
         lastUpdateBlock = block.number;
     }
 
     function setClaimInterval(uint256 _niw) external {
+        require(hasRole(_ADMIN, _msgSender()));
         claimInterval = _niw;
     }
 
     function setToken(IERC20 _newToken) external {
+        require(hasRole(_ADMIN, _msgSender()));
         token = _newToken;
     }
 
     function setNFT(IERC721 _newGoldNFT) external {
+        require(hasRole(_ADMIN, _msgSender()));
         nft = _newGoldNFT;
     }
 
@@ -135,13 +154,13 @@ contract TokenStaking is AccessControl {
         return cb;
     }
 
-    function moveERC20(IERC20 _ERC20, address _dest, uint _ERC20Amount) public {
-        //require(hasRole(_RESCUE, _msgSender()));
+    function moveERC20(IERC20 _ERC20, address _dest, uint _ERC20Amount) nonReentrant public {
+        require(hasRole(_RESCUE, _msgSender())); 
         IERC20(_ERC20).transfer(_dest, _ERC20Amount);
     }
 
-    function ethRescue(address payable _dest, uint _etherAmount) public {
-        //require(hasRole(_RESCUE, _msgSender()));
+    function ethRescue(address payable _dest, uint _etherAmount) nonReentrant public {
+        require(hasRole(_RESCUE, _msgSender()));
         _dest.transfer(_etherAmount);
     }
 
