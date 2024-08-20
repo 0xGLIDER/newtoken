@@ -11,9 +11,13 @@ interface nftIface {
     function nftOwnerInfo(address user) external view returns (uint256);
 }
 
+interface IMintableToken is IERC20 {
+    function mintTo(address recipient, uint256 amount) external;
+}
+
 contract TokenStaking is AccessControl, ReentrancyGuard {
 
-    IERC20 public token; // The ERC-20 token being staked
+    IMintableToken public token; // The ERC-20 token being staked, with minting capability
     IERC721 public nft;
     nftIface public ifacenft;
     uint256 public rewardRatePerBlock; // Reward rate per block
@@ -24,6 +28,7 @@ contract TokenStaking is AccessControl, ReentrancyGuard {
 
     bytes32 public constant _RESCUE = keccak256("_RESCUE");
     bytes32 public constant _ADMIN = keccak256("_ADMIN");
+    bytes32 public constant _MINTER = keccak256("_MINTER");
 
     struct UserInfo {
         uint256 stakedBalance;
@@ -44,9 +49,10 @@ contract TokenStaking is AccessControl, ReentrancyGuard {
     event Unstaked(address indexed staker, uint256 amount);
     event ClaimedRewards(address indexed staker, uint256 amount);
 
-    constructor(IERC20 _token, uint _claimInterval, IERC721 _nft) {
+    constructor(IMintableToken _token, uint _claimInterval, IERC721 _nft, nftIface _ifacenft) {
         token = _token;
         nft = _nft;
+        ifacenft = _ifacenft;
         rewardRatePerBlock = 0.0008 ether;
         lastUpdateBlock = block.number;
         claimInterval = _claimInterval;
@@ -113,7 +119,8 @@ contract TokenStaking is AccessControl, ReentrancyGuard {
         user.lastClaimBlock = block.number;
         totalRewards += pendingRewards;
 
-        require(token.transfer(staker, pendingRewards), "TokenStaking: Reward transfer failed");
+        // Mint the rewards instead of transferring from the contract's balance
+        token.mintTo(staker, pendingRewards);
 
         emit ClaimedRewards(staker, pendingRewards);
     }
@@ -155,7 +162,7 @@ contract TokenStaking is AccessControl, ReentrancyGuard {
         claimInterval = _niw;
     }
 
-    function setToken(IERC20 _newToken) external {
+    function setToken(IMintableToken _newToken) external {
         require(hasRole(_ADMIN, _msgSender()));
         token = _newToken;
     }
