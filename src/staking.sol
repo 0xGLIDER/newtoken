@@ -45,10 +45,9 @@ contract TokenStaking is AccessControl, ReentrancyGuard {
     event Unstaked(address indexed staker, uint256 amount);
     event ClaimedRewards(address indexed staker, uint256 amount);
 
-    constructor(IERC20 _token, uint _claimInterval, IERC721 _nft, nftIface _nftIface) {
+    constructor(IERC20 _token, uint _claimInterval, IERC721 _nft) {
         token = _token;
         nft = _nft;
-        ifacenft = _nftIface;
         rewardRatePerBlock = 0.0008 ether;
         lastUpdateBlock = block.number;
         claimInterval = _claimInterval;

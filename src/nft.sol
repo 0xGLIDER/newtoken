@@ -2,13 +2,17 @@
 
 pragma solidity ^0.8.0;
 
-import {iface} from "./iface.sol";
 import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {ERC721URIStorage} from "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import {hextool} from "./hex.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+
+interface iface {
+    function balanceOf(address account) external view returns (uint256);
+    function mintTo(address recipient, uint256 amount) external;
+}
 
 contract NFT is ERC721URIStorage, AccessControl, ReentrancyGuard {
     
@@ -61,7 +65,7 @@ contract NFT is ERC721URIStorage, AccessControl, ReentrancyGuard {
         tokenBalanceRequired = _setTokenBalanceRequired;
         txFee = 15 ether;
         vault = _setVault;
-        Iface = iface(_ifaceAddress);
+        Iface = iface(_ifaceAddress); 
         supplyInfo = SupplyInfo({
             goldCap: 50, 
             silverCap: 100, 
@@ -91,8 +95,8 @@ contract NFT is ERC721URIStorage, AccessControl, ReentrancyGuard {
     
         // Update level-specific supply and check cap
         if (_level == 1) {
-            require(Iface.balanceOf(_msgSender()) >= tokenBalanceRequired);
-            require(msg.value == 0.025 ether);
+            require(Iface.balanceOf(_msgSender()) >= tokenBalanceRequired, "Token Ba;ance");
+            require(msg.value == 0.025 ether, "Need Ether");
             require(supplyInfo.goldSupply++ < supplyInfo.goldCap, "NFT: Gold supply cap exceeded");
             Iface.mintTo(_msgSender(), 10000 ether);
         } else if (_level == 2) {
@@ -174,29 +178,27 @@ contract NFT is ERC721URIStorage, AccessControl, ReentrancyGuard {
     return keccak256(abi.encodePacked(msg.sender, _level, _eid));
 }
 
-    function _update(address to, uint256 tokenId, address from) nonReentrant internal virtual override(ERC721) returns (address) {
-        if (from == address(0) || to == address(0)){
-            super._update(to, tokenId, from);
-        } else if (from != address(0)) {
-            uint256 lvl = nftOwnerInfo[_msgSender()].level;
-            token.transferFrom(_msgSender(), vault, txFee);
-            NFTOwnerInfo memory n = NFTOwnerInfo({
-            level: 0,
-            hasNFT: false
-            });
-
-            nftOwnerInfo[_msgSender()] = n;
-
-            NFTOwnerInfo memory a = NFTOwnerInfo({
-            level: lvl,
-            hasNFT: true
-            });
-
-            nftOwnerInfo[to] = a;
-            super._update(to, tokenId, from);
+    function _update(address to, uint256 tokenId, address from) internal virtual override(ERC721) returns (address) {
+        // Step 1: Perform all necessary state changes first.
+        NFTOwnerInfo memory n;
+        if (from != address(0)) {
+            n = nftOwnerInfo[from];
+            nftOwnerInfo[from] = NFTOwnerInfo({ level: 0, hasNFT: false });
         }
-        return from;
+
+        if (to != address(0)) {
+            nftOwnerInfo[to] = NFTOwnerInfo({ level: n.level, hasNFT: true });
+        }
+
+        // Step 2: Perform the token transfer fee after state changes.
+        if (from != address(0) && to != address(0)) {
+            token.transferFrom(from, vault, txFee);
+        }
+
+        // Step 3: Call the parent class's _update function.
+        return super._update(to, tokenId, from);
     }
+
 
     function supportsInterface(bytes4 interfaceId) public view virtual override(ERC721URIStorage, AccessControl) returns (bool) {
         return super.supportsInterface(interfaceId);
