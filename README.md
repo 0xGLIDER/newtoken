@@ -2,7 +2,7 @@
 
 ## Abstract
 
-[Token Name] is a groundbreaking token that merges the utility of NFTs with the power of decentralized finance (DeFi), including a novel staking mechanism and a lending platform. This token can only be acquired through the purchase of one of three exclusive NFTs, which mint the tokens and send them directly to the purchaser. Holders of these NFTs can stake their tokens within our decentralized app (dApp) to earn rewards. Additionally, [Token Name] incorporates a deflationary mechanism through a burnable transfer fee, programmatic liquidity provision to Uniswap V3, and the ability to stake Uniswap V3 LP NFTs for additional staking bonuses. The Ethereum generated from NFT sales is strategically allocated, with half directed towards a decentralized lending platform and the other half providing liquidity on Uniswap V3. This document outlines the technical framework, staking mechanism, liquidity strategy, lending platform, key features, and legal disclaimers of [Token Name].
+[Token Name] is a groundbreaking token that merges the utility of NFTs with the power of decentralized finance (DeFi), including a novel staking mechanism and a lending platform. This token can only be acquired through the purchase of one of three exclusive NFTs, which mint the tokens and send them directly to the purchaser. Holders of these NFTs can stake their tokens within our decentralized app (dApp) to earn rewards. Additionally, [Token Name] incorporates a transaction fee mechanism, programmatic liquidity provision to Uniswap V3, and the ability to stake Uniswap V3 LP NFTs for additional staking bonuses. The Ethereum generated from NFT sales is strategically allocated, with half directed towards a decentralized lending platform and the other half providing liquidity on Uniswap V3. This document outlines the technical framework, staking mechanism, liquidity strategy, lending platform, key features, and legal disclaimers of [Token Name].
 
 ## 1. Introduction
 
@@ -66,9 +66,9 @@ The minting of [Token Name] is strictly limited to three scenarios:
 - When a user collects staking rewards.
 - When additional tokens are minted to pair with funds from NFT sales for liquidity provision on Uniswap V3.
 
-### Transfer Fee and Deflationary Mechanism
+### Transaction Fee Mechanism
 
-Every transfer of [Token Name] incurs a small fee that is burned, reducing the total supply of the token. This burn fee is static but configurable via governance vote, allowing the community to adjust it based on market conditions. As more transactions occur, the token supply may decrease, creating a deflationary effect.
+Every transfer of [Token Name] incurs a small transaction fee, which is sent to a vault dedicated to supporting the ecosystem. This fee is static but configurable via governance vote, allowing the community to adjust it based on market conditions. The collected fees will be used for various ecosystem initiatives, including liquidity support, marketing, development, and community incentives.
 
 ### Liquidity Provision
 
@@ -77,7 +77,7 @@ All funds acquired from NFT sales are split equally, with 50% used to add liquid
 ## 6. Security and Governance
 
 - **Smart Contract Security:** [Token Name] and the associated staking and lending mechanisms are governed by audited smart contracts, ensuring secure and reliable operations.
-- **Decentralized Governance:** Governance decisions, including adjustments to the token transfer fee, liquidity strategies, and lending platform parameters, will be made through a decentralized process where NFT holders can vote on key proposals.
+- **Decentralized Governance:** Governance decisions, including adjustments to the transaction fee, liquidity strategies, and lending platform parameters, will be made through a decentralized process where NFT holders can vote on key proposals.
 
 ## 7. Legal Disclaimer
 
@@ -92,4 +92,4 @@ Purchasing an NFT or staking [Token Name] does not constitute an investment cont
 
 ## 9. Conclusion
 
-[Token Name] represents a new paradigm in the fusion of NFTs, DeFi, and liquidity provision, with the added benefit of a decentralized lending platform. By ensuring that the only way to mint tokens is through active participation—whether via NFT purchase, staking, or lending—[Token Name] promises a fair, decentralized, and innovative financial ecosystem. The introduction of a burnable transfer fee, strategic liquidity provision to Uniswap V3, a lending platform, and staking bonuses for liquidity providers adds stability and potential value growth to the token over time.
+[Token Name] represents a new paradigm in the fusion of NFTs, DeFi, and liquidity provision, with the added benefit of a decentralized lending platform. By ensuring that the only way to mint tokens is through active participation—whether via NFT purchase, staking, or lending—[Token Name] promises a fair, decentralized, and innovative financial ecosystem. The introduction of a transaction fee that supports the ecosystem, strategic liquidity provision to Uniswap V3, a lending platform, and staking bonuses for liquidity providers adds stability and potential value growth to the token over time.

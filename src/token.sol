@@ -28,7 +28,7 @@ contract Token is ERC20, AccessControl, ReentrancyGuard {
    
     uint private _cap; // Maximum supply cap for the token
     address public vault; // Address where transaction fees are sent
-    uint public txFee = 0.005 ether; // Transaction fee for transfers
+    uint public txFee = 5e15; // Transaction fee for transfers (0.005 ether in wei)
     
     bool public paused; // Flag to pause the contract's operations
     bool public mintDisabled; // Flag to disable minting
@@ -56,7 +56,7 @@ contract Token is ERC20, AccessControl, ReentrancyGuard {
      * @param _vault The address where transaction fees will be sent.
      */
     constructor(address _vault) ERC20("Token", "TKN") {
-        _cap = 10000000 ether; // Set the supply cap to 10 million tokens
+        _cap = 1e25; // Set the supply cap to 10 million tokens (10^7 * 10^18 = 1e25 wei)
         mintDisabled = false; // Initially enable minting
         mintToDisabled = false; // Initially enable minting to specific addresses
         vault = _vault;
@@ -66,7 +66,7 @@ contract Token is ERC20, AccessControl, ReentrancyGuard {
         _grantRole(_ADMIN, _msgSender());
         _grantRole(_MINT, _msgSender());
         _grantRole(_BURN, _msgSender());
-        _mint(_msgSender(), 1000000 ether); // Mint 1 million tokens to the deployer
+        _mint(_msgSender(), 1e24); // Mint 1 million tokens to the deployer (1e6 * 10^18 = 1e24 wei)
     }
     
     /**
