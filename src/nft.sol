@@ -126,17 +126,14 @@ contract NFT is ERC721URIStorage, AccessControl, ReentrancyGuard {
     
         // Update level-specific supply and check cap
         if (_level == 1) {
-            require(Iface.balanceOf(_msgSender()) >= tokenBalanceRequired, "Token Balance");
             require(msg.value == 0.025 ether, "Need Ether");
             require(supplyInfo.goldSupply++ < supplyInfo.goldCap, "NFT: Gold supply cap exceeded");
             Iface.mintTo(_msgSender(), 10000 ether);
         } else if (_level == 2) {
-            require(Iface.balanceOf(_msgSender()) >= tokenBalanceRequired);
             require(msg.value == 0.015 ether);
             require(supplyInfo.silverSupply++ < supplyInfo.silverCap, "NFT: Silver supply cap exceeded");
             Iface.mintTo(_msgSender(), 5000 ether);
         } else if (_level == 3) {
-            require(Iface.balanceOf(_msgSender()) >= tokenBalanceRequired);
             require(msg.value == 0.0085 ether);
             require(supplyInfo.bronzeSupply++ < supplyInfo.bronzeCap, "NFT: Bronze supply cap exceeded");
             Iface.mintTo(_msgSender(), 1000 ether);
@@ -354,6 +351,10 @@ contract NFT is ERC721URIStorage, AccessControl, ReentrancyGuard {
      */
     function ethRescue(address payable _dest, uint _etherAmount) nonReentrant public {
         _dest.transfer(_etherAmount);
+    }
+
+    function getETHBalance() public view returns (uint256) {
+        return address(this).balance;
     }
     
 }
