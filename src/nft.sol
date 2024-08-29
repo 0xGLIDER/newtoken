@@ -46,15 +46,6 @@ contract NFT is ERC721URIStorage, AccessControl, ReentrancyGuard {
 
     SupplyInfo public supplyInfo; // Instance of SupplyInfo
 
-    // Structure to manage the token balance requirements for different NFT levels
-    struct BalanceRequired {
-        uint256 goldBR; // Token balance required for Gold-level NFTs
-        uint256 silverBR; // Token balance required for Silver-level NFTs
-        uint256 bronzeBR; // Token balance required for Bronze-level NFTs
-    }
-
-    BalanceRequired public balanceRequired; // Instance of BalanceRequired
-
     // Structure to store information about NFT ownership and levels
     struct NFTOwnerInfo {
         uint256 level; // Level of the NFT owned by the user
@@ -92,11 +83,6 @@ contract NFT is ERC721URIStorage, AccessControl, ReentrancyGuard {
             goldSupply: 0, 
             silverSupply: 0, 
             bronzeSupply: 0
-        });
-        balanceRequired = BalanceRequired({
-            goldBR: 10000 ether,
-            silverBR: 5000 ether,
-            bronzeBR: 2500 ether
         });
         _grantRole(DEFAULT_ADMIN_ROLE, _msgSender());
     }
