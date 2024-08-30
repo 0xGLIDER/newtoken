@@ -244,22 +244,27 @@ contract NFT is ERC721URIStorage, AccessControl, ReentrancyGuard {
     }
 
     /**
-     * @dev Function to set a new transaction fee for transferring NFTs.
+     * @dev Function to set a new transaction fee for transferring NFTs. Only callable by an admin.
      * @param _newFee The new transaction fee to set.
      */
     function setTxFee(uint256 _newFee) external {
+        require(hasRole(_ADMIN, _msgSender()), "NFT: Need Admin");
         txFee = _newFee;
     }
 
     /**
-     * @dev Function to set new supply caps for different NFT levels.
+     * @dev Function to set new supply caps for different NFT levels. Only callable by an admin.
      * @param _newGS The new Gold-level supply cap.
      * @param _newSS The new Silver-level supply cap.
      * @param _newBS The new Bronze-level supply cap.
      */
     function setSupplyCaps(uint256 _newGS, uint256 _newSS, uint256 _newBS) public {
+        require(hasRole(_ADMIN, _msgSender()), "NFT: Need Admin");
+        require(_newGS >= supplyInfo.goldSupply);
         supplyInfo.goldCap = _newGS;
+        require(_newSS >= supplyInfo.silverSupply);
         supplyInfo.silverCap = _newSS;
+        require(_newBS >= supplyInfo.bronzeSupply);
         supplyInfo.bronzeCap = _newBS;
     }
 
