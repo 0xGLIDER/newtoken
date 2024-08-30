@@ -130,20 +130,23 @@ contract StablecoinLending is AccessControl, ReentrancyGuard {
     }
 
     // Borrow stablecoins from the pool (non-flash loan)
-    function borrow(uint256 amount, uint256 collateralAmount) external nonReentrant {
+    function borrow(uint256 amount) external nonReentrant {
         require(amount > 0, "Amount must be greater than zero");
-        require(collateralAmount >= (amount * COLLATERALIZATION_RATIO) / 100, "Insufficient collateral");
 
+        // Calculate collateral amount as 150% of the loan amount
+        uint256 collateralAmount = (amount * COLLATERALIZATION_RATIO) / 100;
+
+        // Calculate the borrowing fee
         uint256 fee = (amount * BORROW_FEE) / 10000;
         uint256 totalAmount = amount + fee;
 
         require(totalDeposits >= totalAmount, "Not enough stablecoins in the pool");
 
-        // Transfer collateral
-        collateralToken.transferFrom(_msgSender(), address(this), collateralAmount);
+        // Transfer collateral to the contract
+        collateralToken.transferFrom(msg.sender, address(this), collateralAmount);
 
         // Store the loan details
-        loans[_msgSender()] = Loan({
+        loans[msg.sender] = Loan({
             amount: amount,
             collateral: collateralAmount,
             borrowTimestamp: block.timestamp,
@@ -152,35 +155,48 @@ contract StablecoinLending is AccessControl, ReentrancyGuard {
 
         totalLoans += amount;
         totalDeposits -= totalAmount;
-        stablecoin.transfer(_msgSender(), amount);
+        stablecoin.transfer(msg.sender, amount);
 
         // Split the fee: 50% for rewards, 50% for admin fees
         uint256 rewardFee = fee / 2;
         totalRewardFees += rewardFee;
         totalAdminFees += fee - rewardFee;
 
-        emit Borrowed(_msgSender(), amount, fee, collateralAmount, false);
+        emit Borrowed(msg.sender, amount, fee, collateralAmount, false);
     }
+
 
     // Repay the loan and get collateral back (non-flash loan)
     function repay(uint256 amount) external nonReentrant {
-        Loan storage loan = loans[_msgSender()];
+        Loan storage loan = loans[msg.sender];
         require(loan.amount > 0, "No active loan");
         require(!loan.isFlashLoan, "Cannot repay a flash loan using this function");
         require(amount >= loan.amount, "Amount must cover the loan");
 
-        stablecoin.transferFrom(_msgSender(), address(this), amount);
+        // Calculate the borrowing fee that was initially charged
+        uint256 fee = (loan.amount * BORROW_FEE) / 10000;
+        uint256 totalRepayAmount = loan.amount + fee;
 
+        // Ensure the repayment amount covers the original loan amount plus the fee
+        require(amount >= totalRepayAmount, "Amount must cover the loan and fee");
+
+        // Transfer the repayment amount back to the contract
+        stablecoin.transferFrom(msg.sender, address(this), totalRepayAmount);
+
+        // Update the totalDeposits to reflect the full repayment
+        totalDeposits += totalRepayAmount;
+
+        // Return collateral to the borrower
         uint256 collateralToReturn = loan.collateral;
         loan.amount = 0;
         loan.collateral = 0;
-        totalLoans -= amount;
-        totalDeposits += amount;
+        totalLoans -= loan.amount; // Although loan.amount is 0, this keeps logic consistent
 
-        collateralToken.transfer(_msgSender(), collateralToReturn);
+        collateralToken.transfer(msg.sender, collateralToReturn);
 
-        emit Repaid(_msgSender(), amount, collateralToReturn);
-    }
+        emit Repaid(msg.sender, totalRepayAmount, collateralToReturn);
+    }   
+
 
     // Borrow stablecoins from the pool with flash loan support
     function borrowAndExecute(uint256 amount, uint256 collateralAmount, address callbackContract, bytes calldata callbackData) external nonReentrant {
