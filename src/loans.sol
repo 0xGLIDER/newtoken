@@ -78,24 +78,31 @@ contract StablecoinLending is AccessControl, ReentrancyGuard {
 
     // Withdraw stablecoins from the pool
     function withdraw(uint256 amount) external nonReentrant {
-        UserDeposit storage userDeposit = deposits[_msgSender()];
+        UserDeposit storage userDeposit = deposits[msg.sender];
         require(userDeposit.amount >= amount, "Insufficient deposit balance");
 
         updatePool();
 
         uint256 pending = (userDeposit.amount * accRewardPerShare) / 1e12 - userDeposit.rewardDebt;
-        if (pending > 0) {
-            stablecoin.transfer(_msgSender(), pending);
-            emit RewardsClaimed(_msgSender(), pending);
-        }
+            if (pending > 0) {
+                // Ensure there is no underflow when transferring rewards
+                require(stablecoin.balanceOf(address(this)) >= pending, "Insufficient balance in contract for rewards");
+                stablecoin.transfer(msg.sender, pending);
+                emit RewardsClaimed(msg.sender, pending);
+            }
 
+        // Safely subtract the withdrawal amount
         userDeposit.amount -= amount;
         userDeposit.rewardDebt = (userDeposit.amount * accRewardPerShare) / 1e12;
         totalDeposits -= amount;
 
-        stablecoin.transfer(_msgSender(), amount);
-        emit Withdrawn(_msgSender(), amount);
+        // Ensure there is enough balance in the contract to fulfill the withdrawal
+        require(stablecoin.balanceOf(address(this)) >= amount, "Insufficient balance in contract for withdrawal");
+        stablecoin.transfer(msg.sender, amount);
+
+        emit Withdrawn(msg.sender, amount);
     }
+
 
     // Update the pool with rewards
     function updatePool() internal {
