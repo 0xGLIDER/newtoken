@@ -108,7 +108,6 @@ contract TokenStaking is AccessControl, ReentrancyGuard {
         require(_amount > 0, "Staking: Amount must be greater than 0");
         require(nft.balanceOf(_msgSender()) > 0, "Staking: No NFT balance");
 
-        require(token.approve(address(this), _amount), "Staking: Approval failed");
         require(token.transferFrom(_msgSender(), address(this), _amount), "Staking: Token transfer failed");
 
         UserInfo storage user = userInfo[_msgSender()];

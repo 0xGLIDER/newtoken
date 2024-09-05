@@ -68,7 +68,7 @@ contract StablecoinLending is AccessControl, ReentrancyGuard {
             }
         }
 
-        stablecoin.transferFrom(_msgSender(), address(this), amount);
+        require(stablecoin.transferFrom(_msgSender(), address(this), amount),"Deposit Failed");
         userDeposit.amount += amount;
         userDeposit.rewardDebt = (userDeposit.amount * accRewardPerShare) / 1e12;
         totalDeposits += amount;
@@ -133,6 +133,9 @@ contract StablecoinLending is AccessControl, ReentrancyGuard {
     function borrow(uint256 amount) external nonReentrant {
         require(amount > 0, "Amount must be greater than zero");
 
+        // Ensure the user does not already have an active loan
+        require(loans[msg.sender].amount == 0, "Already have an active loan");
+
         // Calculate collateral amount as 150% of the loan amount
         uint256 collateralAmount = (amount * COLLATERALIZATION_RATIO) / 100;
 
@@ -165,41 +168,42 @@ contract StablecoinLending is AccessControl, ReentrancyGuard {
         emit Borrowed(msg.sender, amount, fee, collateralAmount, false);
     }
 
-
     // Repay the loan and get collateral back (non-flash loan)
-    function repay(uint256 amount) external nonReentrant {
+    function repay() external nonReentrant {
         Loan storage loan = loans[msg.sender];
         require(loan.amount > 0, "No active loan");
         require(!loan.isFlashLoan, "Cannot repay a flash loan using this function");
-        require(amount >= loan.amount, "Amount must cover the loan");
 
         // Calculate the borrowing fee that was initially charged
         uint256 fee = (loan.amount * BORROW_FEE) / 10000;
         uint256 totalRepayAmount = loan.amount + fee;
 
-        // Ensure the repayment amount covers the original loan amount plus the fee
-        require(amount >= totalRepayAmount, "Amount must cover the loan and fee");
-
         // Transfer the repayment amount back to the contract
-        stablecoin.transferFrom(msg.sender, address(this), totalRepayAmount);
+        require(stablecoin.transferFrom(msg.sender, address(this), totalRepayAmount), "Repayment failed");
 
         // Update the totalDeposits to reflect the full repayment
         totalDeposits += totalRepayAmount;
 
         // Return collateral to the borrower
         uint256 collateralToReturn = loan.collateral;
+
+        // Subtract the loan amount from totalLoans before resetting the loan
+        totalLoans -= loan.amount;
+
+        // Reset the loan details
         loan.amount = 0;
         loan.collateral = 0;
-        totalLoans -= loan.amount; // Although loan.amount is 0, this keeps logic consistent
 
+        // Return the collateral to the borrower
         collateralToken.transfer(msg.sender, collateralToReturn);
 
         emit Repaid(msg.sender, totalRepayAmount, collateralToReturn);
-    }   
+    }
 
 
     // Borrow stablecoins from the pool with flash loan support
     function borrowAndExecute(uint256 amount, uint256 collateralAmount, address callbackContract, bytes calldata callbackData) external nonReentrant {
+        require(loans[msg.sender].amount == 0, "Already have an active loan");
         require(amount > 0, "Amount must be greater than zero");
         require(collateralAmount >= (amount * COLLATERALIZATION_RATIO) / 100, "Insufficient collateral");
 
