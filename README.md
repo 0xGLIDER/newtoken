@@ -1,4 +1,4 @@
-# [Token Name] - The Future of Tokenized NFT Staking and DeFi Lending
+# [Token Name] 
 
 ## Abstract
 
