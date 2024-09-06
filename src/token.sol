@@ -222,40 +222,59 @@ contract Token is ERC20, AccessControl, ReentrancyGuard {
         super._update(from, to, amount);
     }
 
-    /**
-     * @dev Function to transfer tokens from one address to another, applying a transaction fee unless the sender is whitelisted.
-     * @param from The address sending tokens.
-     * @param to The address receiving tokens.
-     * @param value The amount of tokens to transfer.
-     * @return True if the transfer was successful.
-     */
     function transferFrom(address from, address to, uint256 value) nonReentrant public virtual override returns (bool) {
         address spender = _msgSender();
+
+        // Check that the spender has enough allowance to transfer the tokens
+        uint256 currentAllowance = allowance(from, spender);
+        require(currentAllowance >= value, "ERC20: transfer amount exceeds allowance");
+
+        // Decrease the allowance by the value being transferred
+        _approve(from, spender, currentAllowance - value);
+
         if (whitelistedAddress[spender]) {
             _transfer(from, to, value);
         } else {
+            // Transfer value to the recipient
             _transfer(from, to, value);
+
+            // Apply transaction fee and transfer to vault
             _transfer(from, vault, txFee);
         }
+
         return true;
     }
 
+
     /**
-     * @dev Function to transfer tokens from the caller's address to another, applying a transaction fee unless the sender is whitelisted.
-     * @param to The address receiving tokens.
-     * @param value The amount of tokens to transfer.
-     * @return True if the transfer was successful.
-     */
+    * @dev Function to transfer tokens from the caller's address to another, applying a transaction fee unless the sender is whitelisted.
+    * This version includes an allowance check, which is non-standard for ERC-20 transfers.
+    * @param to The address receiving tokens.
+    * @param value The amount of tokens to transfer.
+    * @return True if the transfer was successful.
+    */
     function transfer(address to, uint256 value) nonReentrant public virtual override returns (bool) {
         address owner = _msgSender();
+
+        // Check the allowance for the sender themselves, i.e., owner allows themselves to transfer
+        uint256 currentAllowance = allowance(owner, owner);
+        require(currentAllowance >= value, "ERC20: transfer amount exceeds allowance");
+
+        // Update the allowance (this part is non-standard for `transfer`)
+        _approve(owner, owner, currentAllowance - value);
+
+        // If the owner is whitelisted, transfer without a fee
         if (whitelistedAddress[owner]) {
             _transfer(owner, to, value);
         } else {
+            // Transfer tokens and apply the fee
             _transfer(owner, to, value);
-            _transfer(owner, vault, txFee);
+            _transfer(owner, vault, txFee);  // Apply transaction fee to vault
         }
+
         return true;
     }
+
 
     /**
      * @dev Function to add or remove an address from the whitelist.

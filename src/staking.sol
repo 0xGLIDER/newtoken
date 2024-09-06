@@ -13,15 +13,6 @@ interface nftIface {
 
 interface IMintableToken is IERC20 {
     function mintTo(address recipient, uint256 amount) external;
-    function permit(
-        address owner, 
-        address spender, 
-        uint256 value, 
-        uint256 deadline, 
-        uint8 v, 
-        bytes32 r, 
-        bytes32 s
-    ) external;
 }
 
 /**
@@ -84,6 +75,8 @@ contract TokenStaking is AccessControl, ReentrancyGuard {
         lastUpdateBlock = block.number;
         claimInterval = _claimInterval;
         rewardBonus = RewardLevelBonus({ gold: 0.001 ether, silver: 0.0005 ether, bronze: 0.0002 ether });
+        _grantRole(DEFAULT_ADMIN_ROLE, _msgSender());
+        _grantRole(_ADMIN, _msgSender());
     }
 
     /**
