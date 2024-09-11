@@ -234,18 +234,20 @@ contract StablecoinLending is AccessControl, ReentrancyGuard {
         uint256 collateralAmount,
         address callbackContract,
         bytes calldata callbackData
-    ) external nonReentrant {
+        ) external nonReentrant {
         require(loans[msg.sender].amount == 0, "Already have an active loan");
         require(amount > 0, "Amount must be greater than zero");
         require(collateralAmount >= (amount * COLLATERALIZATION_RATIO) / 100, "Insufficient collateral");
 
-        uint256 fee = (amount * BORROW_FEE) / 10000;
-        uint256 totalAmount = amount + fee;
+        uint256 fee = (amount * BORROW_FEE) / 10000; // 3% fee on loan amount
+        uint256 totalAmount = amount; // Only consider the loan amount for total deposits
 
         require(totalDeposits >= totalAmount, "Not enough stablecoins in the pool");
 
+        // Transfer the collateral from the borrower to the contract
         collateralToken.transferFrom(_msgSender(), address(this), collateralAmount);
 
+        // Record the loan details
         loans[_msgSender()] = Loan({
             amount: amount,
             collateral: collateralAmount,
@@ -255,25 +257,32 @@ contract StablecoinLending is AccessControl, ReentrancyGuard {
         });
 
         totalLoans += amount;
-        totalDeposits -= totalAmount;
-        stablecoin.transfer(_msgSender(), amount);
+        totalDeposits -= amount; // Only subtract the loan amount, not the fee
+        stablecoin.transfer(_msgSender(), amount); // Send the loan amount to the user
 
+        // Execute callback on the external contract
         (bool success, ) = callbackContract.call(callbackData);
         require(success, "Callback execution failed");
 
+        // Calculate the repayment amount (loan amount + fee)
         uint256 repaymentAmount = amount + fee;
         require(stablecoin.balanceOf(address(this)) >= repaymentAmount, "Insufficient funds for repayment");
 
-        totalDeposits += repaymentAmount;
+        totalDeposits += repaymentAmount; // Add back the repayment amount (loan + fee)
         totalLoans -= amount;
 
-        uint256 collateralToReturn = loans[_msgSender()].collateral;
+        // Calculate the collateral to return minus the 3% fee
+        uint256 collateralFee = (amount * BORROW_FEE) / 10000; // 3% of loan amount as collateral fee
+        uint256 collateralToReturn = loans[_msgSender()].collateral - collateralFee;
+
         loans[_msgSender()].amount = 0;
         loans[_msgSender()].collateral = 0;
         loans[_msgSender()].isRepaid = true;
 
+        // Return the collateral minus the fee to the borrower
         collateralToken.transfer(_msgSender(), collateralToReturn);
 
+        // Split the fee between rewards and admin
         uint256 rewardFee = fee / 2;
         totalRewardFees += rewardFee;
         totalAdminFees += fee - rewardFee;
@@ -281,6 +290,7 @@ contract StablecoinLending is AccessControl, ReentrancyGuard {
         emit Borrowed(_msgSender(), amount, fee, collateralAmount, true);
         emit Repaid(_msgSender(), repaymentAmount, collateralToReturn);
     }
+
 
     // Liquidate under-collateralized loans
     function liquidate(address user) external nonReentrant {
