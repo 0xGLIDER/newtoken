@@ -212,13 +212,7 @@ contract StablecoinLending is AccessControl, ReentrancyGuard {
 
         // Ensure the collateral is sufficient to cover the repayment + fee
         require(loan.collateral >= repayAmountWithFee, "Insufficient collateral for forced repayment");
-
-        // Split the fee between pool depositors and admin
-        uint256 rewardFee = fee / 2; // 50% of the fee goes to depositors as rewards
-        uint256 adminFee = fee - rewardFee; // The remaining 50% goes to the admin
-
-        totalRewardFees += rewardFee; // Add to the pool's reward fees
-        totalAdminFees += adminFee; // Add to the admin fees
+    
 
         // Reduce the collateral by the full repayment amount (loan amount + fee)
         loan.collateral -= repayAmountWithFee;
@@ -235,8 +229,9 @@ contract StablecoinLending is AccessControl, ReentrancyGuard {
         collateralToken.transfer(borrower, remainingCollateral);
         }
 
-        emit ForcedRepayment(borrower, totalRepayAmount, remainingCollateral);
+     emit ForcedRepayment(borrower, totalRepayAmount, remainingCollateral);
     }
+
 
 
     // Borrow stablecoins from the pool with flash loan support
