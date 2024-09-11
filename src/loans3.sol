@@ -138,13 +138,15 @@ contract StablecoinLending is AccessControl, ReentrancyGuard {
         require(loans[msg.sender].amount == 0, "Already have an active loan");
 
         uint256 collateralAmount = (amount * COLLATERALIZATION_RATIO) / 100;
-        uint256 fee = (amount * BORROW_FEE) / 10000;
-        uint256 totalAmount = amount + fee;
+        uint256 fee = (amount * BORROW_FEE) / 10000; // 3% fee
+        uint256 totalAmount = amount; // Only consider the amount for total deposits
 
         require(totalDeposits >= totalAmount, "Not enough stablecoins in the pool");
 
+        // Transfer the collateral from the borrower
         collateralToken.transferFrom(msg.sender, address(this), collateralAmount);
 
+        // Create a loan for the borrower
         loans[msg.sender] = Loan({
             amount: amount,
             collateral: collateralAmount,
@@ -154,15 +156,17 @@ contract StablecoinLending is AccessControl, ReentrancyGuard {
         });
 
         totalLoans += amount;
-        totalDeposits -= totalAmount;
-        stablecoin.transfer(msg.sender, amount);
+        totalDeposits -= amount; // Only subtract the borrowed amount, not the fee
+        stablecoin.transfer(msg.sender, amount); // Transfer the borrowed amount to the user
 
+        // Split the fee between rewards and admin
         uint256 rewardFee = fee / 2;
         totalRewardFees += rewardFee;
         totalAdminFees += fee - rewardFee;
 
         emit Borrowed(msg.sender, amount, fee, collateralAmount, false);
     }
+
 
     // Repay the loan and get collateral back (non-flash loan)
     function repay() external nonReentrant {
@@ -171,21 +175,29 @@ contract StablecoinLending is AccessControl, ReentrancyGuard {
         require(!loan.isFlashLoan, "Cannot repay a flash loan using this function");
         require(!loan.isRepaid, "Loan already repaid");
 
-        uint256 totalRepayAmount = loan.amount; // Fee is only charged on borrowing
+        uint256 totalRepayAmount = loan.amount; // Fee was already charged at borrowing
 
+        // Transfer the repayment amount from the borrower to the contract
         require(stablecoin.transferFrom(msg.sender, address(this), totalRepayAmount), "Repayment failed");
 
-        totalDeposits += totalRepayAmount;
-        uint256 collateralToReturn = loan.collateral;
+        totalDeposits += loan.amount; // Add back only the borrowed amount (not including the fee)
+
+        // Calculate the collateral to return minus the 3% fee
+        uint256 collateralFee = (loan.amount * BORROW_FEE) / 10000; // 3% of loan amount as fee
+        uint256 collateralToReturn = loan.collateral - collateralFee;
 
         totalLoans -= loan.amount;
         loan.amount = 0;
         loan.collateral = 0;
         loan.isRepaid = true;
 
+        // Return the collateral minus the 3% fee to the borrower
         collateralToken.transfer(msg.sender, collateralToReturn);
+
         emit Repaid(msg.sender, totalRepayAmount, collateralToReturn);
     }
+
+
 
     // Forced repayment by the admin if the loan is not repaid within 2 weeks
     function forceRepayment(address borrower) external onlyRole(ADMIN_ROLE) nonReentrant {
@@ -296,11 +308,11 @@ contract StablecoinLending is AccessControl, ReentrancyGuard {
         return (loan.amount, loan.collateral, loan.borrowTimestamp, loan.isFlashLoan, loan.isRepaid);
     }
 
-    // Admin function to withdraw non-reward fees (admin fees) TODO:// Change to sweep where function just sweeps total amount of fees.
+    // Admin function to withdraw non-reward fees (admin fees)
     function withdrawFees(uint256 amount) external onlyRole(ADMIN_ROLE) nonReentrant {
         require(amount <= totalAdminFees, "Insufficient admin fee balance");
         totalAdminFees -= amount;
-        stablecoin.transfer(_msgSender(), amount); //TODO: Change to Vault as reciever 
+        stablecoin.transfer(_msgSender(), amount);
 
         emit FeesWithdrawn(_msgSender(), amount);
     }
@@ -312,7 +324,7 @@ contract StablecoinLending is AccessControl, ReentrancyGuard {
     }
 
     // View function to see pending rewards for a user
-    function pendingRewards(address user) external view returns (uint256) {
+    function viewPendingRewards(address user) external view returns (uint256) {
         UserDeposit storage userDeposit = deposits[user];
         uint256 _accRewardPerShare = accRewardPerShare;
 
