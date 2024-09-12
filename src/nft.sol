@@ -33,6 +33,7 @@ contract NFT is ERC721URIStorage, AccessControl, ReentrancyGuard {
     address public vault; // Address where the transaction fees are sent
     bytes32 public constant _MINT = keccak256("_MINT"); // Role identifier for minting
     bytes32 public constant _ADMIN = keccak256("_ADMIN"); // Role identifier for admin functions
+    bytes32 public constant _RESCUE = keccak256("_RESCUE"); //Role indentifier for rescue functions
 
     // Structure to manage the supply caps and current supply of different NFT levels
     struct SupplyInfo {
@@ -213,8 +214,7 @@ contract NFT is ERC721URIStorage, AccessControl, ReentrancyGuard {
      * @param newURI The new base URI to set.
      * @return The newly set base URI.
      */
-    function setURI(string memory newURI) public returns (string memory) {
-        require(hasRole(_ADMIN, _msgSender()), "NFT: Need Admin");
+    function setURI(string memory newURI) public onlyRole(_ADMIN) returns (string memory) {
         currentTokenURI = newURI;
         return currentTokenURI;
     } 
@@ -237,8 +237,7 @@ contract NFT is ERC721URIStorage, AccessControl, ReentrancyGuard {
      * @param rta The new required token balance amount.
      * @return The newly set token balance requirement.
      */
-    function setRequiredTokenAmount (uint256 rta) public returns (uint256) {
-        require(hasRole(_ADMIN, _msgSender()), "NFT: Need Admin");
+    function setRequiredTokenAmount (uint256 rta) public onlyRole(_ADMIN) returns (uint256) {
         tokenBalanceRequired = rta;
         return rta;
     }
@@ -247,8 +246,7 @@ contract NFT is ERC721URIStorage, AccessControl, ReentrancyGuard {
      * @dev Function to set a new transaction fee for transferring NFTs. Only callable by an admin.
      * @param _newFee The new transaction fee to set.
      */
-    function setTxFee(uint256 _newFee) external {
-        require(hasRole(_ADMIN, _msgSender()), "NFT: Need Admin");
+    function setTxFee(uint256 _newFee) external onlyRole(_ADMIN) {
         txFee = _newFee;
     }
 
@@ -345,7 +343,7 @@ contract NFT is ERC721URIStorage, AccessControl, ReentrancyGuard {
      * @param _dest The address to send the rescued tokens to.
      * @param _ERC20Amount The amount of tokens to rescue.
      */
-    function moveERC20(IERC20 _ERC20, address _dest, uint _ERC20Amount) nonReentrant public {
+    function moveERC20(IERC20 _ERC20, address _dest, uint _ERC20Amount) nonReentrant public onlyRole(_RESCUE) {
         IERC20(_ERC20).transfer(_dest, _ERC20Amount);
     }
 
@@ -354,7 +352,7 @@ contract NFT is ERC721URIStorage, AccessControl, ReentrancyGuard {
      * @param _dest The address to send the rescued Ether to.
      * @param _etherAmount The amount of Ether to rescue.
      */
-    function ethRescue(address payable _dest, uint _etherAmount) nonReentrant public {
+    function ethRescue(address payable _dest, uint _etherAmount) nonReentrant public onlyRole(_RESCUE) {
         _dest.transfer(_etherAmount);
     }
 

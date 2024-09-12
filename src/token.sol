@@ -74,8 +74,7 @@ contract Token is ERC20, AccessControl, ReentrancyGuard {
      * Only callable by an admin.
      * @param _paused Boolean indicating whether the contract should be paused.
      */
-    function setPaused(bool _paused) external {
-        require(hasRole(_ADMIN, _msgSender()), "Contract: Need Admin");
+    function setPaused(bool _paused) external onlyRole(_ADMIN) {
         paused = _paused;
 
         if (_paused) {
@@ -90,8 +89,7 @@ contract Token is ERC20, AccessControl, ReentrancyGuard {
      * Only callable by an admin.
      * @param _disableMinting Boolean indicating whether minting should be disabled.
      */
-    function disableMint(bool _disableMinting) external {
-        require(hasRole(_ADMIN, _msgSender()), "Contract: Need Admin");
+    function disableMint(bool _disableMinting) external onlyRole(_ADMIN) {
         mintDisabled = _disableMinting;
 
         if (_disableMinting) {
@@ -106,8 +104,7 @@ contract Token is ERC20, AccessControl, ReentrancyGuard {
      * Only callable by an admin.
      * @param _disableMintTo Boolean indicating whether minting to specific addresses should be disabled.
      */
-    function disableMintTo(bool _disableMintTo) external {
-        require(hasRole(_ADMIN, _msgSender()), "Need Admin");
+    function disableMintTo(bool _disableMintTo) external onlyRole(_ADMIN) {
         mintToDisabled = _disableMintTo;
 
         if (_disableMintTo) {
@@ -147,8 +144,7 @@ contract Token is ERC20, AccessControl, ReentrancyGuard {
      * @param _to The address to mint tokens to.
      * @param _amount The amount of tokens to mint.
      */
-    function mintTo(address _to, uint _amount) external pause mintToDis {
-        require(hasRole(_MINTTO, _msgSender()), "Contract: Need Minto");
+    function mintTo(address _to, uint _amount) external pause mintToDis onlyRole(_MINTTO) {
         require(totalSupply() + _amount <= _cap, "Contract: Supply Cap exceeded");
         emit TokensMintedTo(_to, _amount);
         _mint(_to, _amount);
@@ -159,8 +155,7 @@ contract Token is ERC20, AccessControl, ReentrancyGuard {
      * Only callable by an address with the _MINT role, and if minting is enabled and contract is not paused.
      * @param _amount The amount of tokens to mint.
      */
-    function mint(uint _amount) external pause mintDis {
-        require(hasRole(_MINT, _msgSender()), "Contract: Need Mint");
+    function mint(uint _amount) external pause mintDis onlyRole(_MINT) {
         require(totalSupply() + _amount <= _cap, "Contract: Supply Cap exceeded");
         emit TokensMinted(_amount);
         _mint(_msgSender(), _amount);
@@ -171,8 +166,7 @@ contract Token is ERC20, AccessControl, ReentrancyGuard {
      * Only callable by an address with the _BURN role, and if the contract is not paused.
      * @param _amount The amount of tokens to burn.
      */
-    function burn(uint _amount) external pause { 
-        require(hasRole(_BURN, _msgSender()), "Contract: Need Burn");
+    function burn(uint _amount) external pause onlyRole(_BURN) { 
         emit TokensBurned(_amount, _msgSender());
         _burn(_msgSender(), _amount);
     }
@@ -183,8 +177,7 @@ contract Token is ERC20, AccessControl, ReentrancyGuard {
      * @param _from The address to burn tokens from.
      * @param _amount The amount of tokens to burn.
      */
-    function burnFrom(address _from, uint _amount) external pause {
-        require(hasRole(_BURNFROM, _msgSender()), "Contract: Need Burnfrom");
+    function burnFrom(address _from, uint _amount) external pause onlyRole(_BURNFROM) {
         emit TokensBurnedFrom(_from, _amount, _msgSender());
         _burn(_from, _amount);
     }
@@ -194,8 +187,7 @@ contract Token is ERC20, AccessControl, ReentrancyGuard {
      * Only callable by an address with the _SUPPLY role, and if the contract is not paused.
      * @param _supplyCap The new supply cap.
      */
-    function setSupplyCap(uint _supplyCap) external pause {
-        require(hasRole(_SUPPLY, _msgSender()), "Need Supply");
+    function setSupplyCap(uint _supplyCap) external pause onlyRole(_SUPPLY) {
         require(_supplyCap >= totalSupply(), "Contract: Supply Cap too low");
         _cap = _supplyCap;
         emit SupplyCapChanged(_supplyCap, _msgSender());
@@ -256,13 +248,6 @@ contract Token is ERC20, AccessControl, ReentrancyGuard {
     function transfer(address to, uint256 value) nonReentrant public virtual override returns (bool) {
         address owner = _msgSender();
 
-        // Check the allowance for the sender themselves, i.e., owner allows themselves to transfer
-        uint256 currentAllowance = allowance(owner, owner);
-        require(currentAllowance >= value, "ERC20: transfer amount exceeds allowance");
-
-        // Update the allowance (this part is non-standard for `transfer`)
-        _approve(owner, owner, currentAllowance - value);
-
         // If the owner is whitelisted, transfer without a fee
         if (whitelistedAddress[owner]) {
             _transfer(owner, to, value);
@@ -283,8 +268,7 @@ contract Token is ERC20, AccessControl, ReentrancyGuard {
      * @param _whitelist The address to whitelist or remove from the whitelist.
      * @param _status Boolean indicating whether to add (true) or remove (false) the address from the whitelist.
      */
-    function setWhitelistAddress(address _whitelist, bool _status) external {
-        require(hasRole(_ADMIN, msg.sender), "Need Admin");
+    function setWhitelistAddress(address _whitelist, bool _status) external onlyRole(_ADMIN) {
         require(_whitelist != address(0), "Invalid address");
         whitelistedAddress[_whitelist] = _status;
     }
@@ -296,8 +280,7 @@ contract Token is ERC20, AccessControl, ReentrancyGuard {
      * @param _dest The address to send the rescued tokens to.
      * @param _ERC20Amount The amount of tokens to rescue.
      */
-    function moveERC20(IERC20 _ERC20, address _dest, uint _ERC20Amount) nonReentrant public {
-        require(hasRole(_RESCUE, msg.sender), "Need RESCUE");
+    function moveERC20(IERC20 _ERC20, address _dest, uint _ERC20Amount) nonReentrant public onlyRole(_RESCUE) {
         IERC20(_ERC20).safeTransfer(_dest, _ERC20Amount);
         emit ERC20Rescued(_ERC20, block.number, _dest, _ERC20Amount);
     }
@@ -308,8 +291,7 @@ contract Token is ERC20, AccessControl, ReentrancyGuard {
      * @param _dest The address to send the rescued Ether to.
      * @param _etherAmount The amount of Ether to rescue.
      */
-    function ethRescue(address payable _dest, uint _etherAmount) nonReentrant public {
-        require(hasRole(_RESCUE, msg.sender), "Need RESCUE");
+    function ethRescue(address payable _dest, uint _etherAmount) nonReentrant public onlyRole(_RESCUE) {
         _dest.transfer(_etherAmount);
         emit ETHRescued(_dest, block.number, _etherAmount);
     }
