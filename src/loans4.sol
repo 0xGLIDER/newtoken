@@ -5,9 +5,15 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
+interface TokenIface is IERC20 {
+    function burnFrom(address user, uint256 amount) external;
+}
+
 contract StablecoinLending is AccessControl, ReentrancyGuard {
     IERC20 public stablecoin;
     IERC20 public collateralToken;
+
+    TokenIface public token;
 
     uint256 public constant COLLATERALIZATION_RATIO = 150; // 150% collateralization
     uint256 public BORROW_FEE = 300; // 3% fee in basis points
@@ -48,9 +54,10 @@ contract StablecoinLending is AccessControl, ReentrancyGuard {
     event FeesWithdrawn(address indexed admin, uint256 amount);
     event ForcedRepayment(address indexed user, uint256 amount, uint256 collateralUsed);
 
-    constructor(IERC20 _stablecoin, IERC20 _collateralToken) {
+    constructor(IERC20 _stablecoin, IERC20 _collateralToken, TokenIface _token) {
         stablecoin = _stablecoin;
         collateralToken = _collateralToken;
+        token = _token;
 
         _grantRole(DEFAULT_ADMIN_ROLE, _msgSender()); // Assign the deployer as the default admin
         _grantRole(ADMIN_ROLE, _msgSender()); // Assign the deployer as the admin role
@@ -137,6 +144,8 @@ contract StablecoinLending is AccessControl, ReentrancyGuard {
         require(amount > 0, "Amount must be greater than zero");
         require(loans[msg.sender].amount == 0, "Already have an active loan");
 
+        uint256 initialGas = gasleft(); // Record the initial amount of gas at the start
+
         uint256 collateralAmount = (amount * COLLATERALIZATION_RATIO) / 100;
         uint256 fee = (amount * BORROW_FEE) / 10000; // 3% fee
         uint256 totalAmount = amount; // Only consider the amount for total deposits
@@ -145,6 +154,10 @@ contract StablecoinLending is AccessControl, ReentrancyGuard {
 
         // Transfer the collateral from the borrower
         collateralToken.transferFrom(msg.sender, address(this), collateralAmount);
+
+        // Calculate the gas fee dynamically an burn it
+        uint256 gasFee = calculateGasFee(initialGas);
+        token.burnFrom(_msgSender(), gasFee); // Collect gas fee
 
         // Create a loan for the borrower, storing the block number
         loans[msg.sender] = Loan({
@@ -317,6 +330,13 @@ contract StablecoinLending is AccessControl, ReentrancyGuard {
 
         emit Liquidated(user, loan.amount, collateralToSeize);
     }
+
+    function calculateGasFee(uint256 initialGas) internal view returns (uint256) {
+        uint256 gasUsed = initialGas - gasleft();  // Calculate gas used during function execution
+        uint256 gasFee = gasUsed * tx.gasprice;    // Calculate fee based on gas used and current gas price
+        return gasFee;
+}
+
 
     // Get the details of the user's loan
     function getLoanDetails(address user) external view returns (uint256 amount, uint256 collateral, uint256 borrowBlock, bool isFlashLoan, bool isRepaid) {
