@@ -31,6 +31,7 @@ contract TokenStaking is AccessControl, ReentrancyGuard {
     uint256 public totalStaked; // Total amount of tokens staked in the contract
     uint256 public totalRewards; // Total amount of rewards distributed
     uint256 public claimInterval; // Number of blocks between reward claims
+    uint256 public stakeCap = 1e21;
 
     // Role identifiers for different administrative actions
     bytes32 public constant _RESCUE = keccak256("_RESCUE");
@@ -115,7 +116,7 @@ contract TokenStaking is AccessControl, ReentrancyGuard {
         UserInfo storage user = userInfo[_msgSender()];
 
         user.stakedBalance += _amount;
-        require(user.stakedBalance <= 1e20, "Stake exceeds cap");
+        require(user.stakedBalance <= stakeCap, "Stake exceeds cap");
 
         totalStaked += _amount;
         user.lastClaimBlock = block.number;
@@ -201,9 +202,8 @@ contract TokenStaking is AccessControl, ReentrancyGuard {
      * @dev Sets a new reward rate per block. Only callable by an admin.
      * @param _newRewardRatePerBlock The new reward rate per block.
      */
-    function setRewardRatePerBlock(uint256 _newRewardRatePerBlock) external {
+    function setRewardRatePerBlock(uint256 _newRewardRatePerBlock) external onlyRole(_ADMIN) {
         require(_newRewardRatePerBlock > 0, "Reward rate must be positive");
-        require(hasRole(_ADMIN, _msgSender()));
         rewardRatePerBlock = _newRewardRatePerBlock;
         lastUpdateBlock = block.number;
     }
@@ -212,8 +212,7 @@ contract TokenStaking is AccessControl, ReentrancyGuard {
      * @dev Sets a new claim interval. Only callable by an admin.
      * @param _niw The new claim interval in blocks.
      */
-    function setClaimInterval(uint256 _niw) external {
-        require(hasRole(_ADMIN, _msgSender()));
+    function setClaimInterval(uint256 _niw) external onlyRole(_ADMIN) {
         claimInterval = _niw;
     }
 
@@ -221,18 +220,20 @@ contract TokenStaking is AccessControl, ReentrancyGuard {
      * @dev Sets a new token contract for staking. Only callable by an admin.
      * @param _newToken The address of the new mintable token contract.
      */
-    function setToken(IMintableToken _newToken) external {
-        require(hasRole(_ADMIN, _msgSender()));
+    function setToken(IMintableToken _newToken) external onlyRole(_ADMIN){
         token = _newToken;
     }
 
     /**
      * @dev Sets a new NFT contract. Only callable by an admin.
-     * @param _newGoldNFT The address of the new ERC-721 NFT contract.
+     * @param _newNFT The address of the new ERC-721 NFT contract.
      */
-    function setNFT(IERC721 _newGoldNFT) external {
-        require(hasRole(_ADMIN, _msgSender()));
-        nft = _newGoldNFT;
+    function setNFT(IERC721 _newNFT) external onlyRole(_ADMIN) {
+        nft = _newNFT;
+    }
+
+    function setStakeCap(uint256 _newCap) external onlyRole(_ADMIN){
+        stakeCap = _newCap;
     }
 
     /**
@@ -251,8 +252,7 @@ contract TokenStaking is AccessControl, ReentrancyGuard {
      * @param _dest The address to send the rescued tokens to.
      * @param _ERC20Amount The amount of tokens to rescue.
      */
-    function moveERC20(IERC20 _ERC20, address _dest, uint _ERC20Amount) nonReentrant public {
-        require(hasRole(_RESCUE, _msgSender())); 
+    function moveERC20(IERC20 _ERC20, address _dest, uint _ERC20Amount) nonReentrant public onlyRole(_RESCUE) {
         IERC20(_ERC20).transfer(_dest, _ERC20Amount);
     }
 
@@ -262,8 +262,7 @@ contract TokenStaking is AccessControl, ReentrancyGuard {
      * @param _dest The address to send the rescued Ether to.
      * @param _etherAmount The amount of Ether to rescue.
      */
-    function ethRescue(address payable _dest, uint _etherAmount) nonReentrant public {
-        require(hasRole(_RESCUE, _msgSender()));
+    function ethRescue(address payable _dest, uint _etherAmount) nonReentrant public onlyRole(_RESCUE){
         _dest.transfer(_etherAmount);
     }
 }
