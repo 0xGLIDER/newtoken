@@ -28,7 +28,7 @@ contract Token is ERC20, AccessControl, ReentrancyGuard {
    
     uint private _cap; // Maximum supply cap for the token
     address public vault; // Address where transaction fees are sent
-    uint public txFee = 5e15; // Transaction fee for transfers (0.005 ether in wei)
+    uint public txFee = 5e15; // Transaction fee for transfers (0.005 ether in wei represented as scientific e notation)
     
     bool public paused; // Flag to pause the contract's operations
     bool public mintDisabled; // Flag to disable minting

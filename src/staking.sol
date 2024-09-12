@@ -72,10 +72,10 @@ contract TokenStaking is AccessControl, ReentrancyGuard {
         token = _token;
         nft = _nft;
         ifacenft = _ifacenft;
-        rewardRatePerBlock = 0.0008 ether;
+        rewardRatePerBlock = 8e14;
         lastUpdateBlock = block.number;
         claimInterval = _claimInterval;
-        rewardBonus = RewardLevelBonus({ gold: 0.001 ether, silver: 0.0005 ether, bronze: 0.0002 ether });
+        rewardBonus = RewardLevelBonus({ gold: 1e15, silver: 5e14, bronze: 2e14 });
         _grantRole(DEFAULT_ADMIN_ROLE, _msgSender());
         _grantRole(_ADMIN, _msgSender());
     }
