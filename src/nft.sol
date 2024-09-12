@@ -30,6 +30,12 @@ contract NFT is ERC721URIStorage, AccessControl, ReentrancyGuard {
     iface public Iface; // Interface for interacting with the ERC20 contract
     string public currentTokenURI; // Base URI for all NFTs
     uint256 public txFee; // Fee in tokens for transferring NFTs
+    uint256 public lvlOnePurchasePrice = 2.5e15;
+    uint256 public lvlTwoPurchasePrice = 1.5e15;
+    uint256 public lvlThreePurchasePrice = 1e15;
+    uint256 public tokenAmtPerLvlOnePurchase = 1e22;
+    uint256 public tokenAmtPerLvlTwoPurchase = 5e21;
+    uint256 public tokenAmtPerLvlThreePurchase = 1e21;
     address public vault; // Address where the transaction fees are sent
     bytes32 public constant _MINT = keccak256("_MINT"); // Role identifier for minting
     bytes32 public constant _ADMIN = keccak256("_ADMIN"); // Role identifier for admin functions
@@ -74,7 +80,7 @@ contract NFT is ERC721URIStorage, AccessControl, ReentrancyGuard {
         currentTokenURI = _tokenURI;
         token = _tokenContract;
         tokenBalanceRequired = _setTokenBalanceRequired;
-        txFee = 15 ether;
+        txFee = 1.5e19;
         vault = _setVault;
         Iface = iface(_ifaceAddress); 
         supplyInfo = SupplyInfo({
@@ -89,19 +95,19 @@ contract NFT is ERC721URIStorage, AccessControl, ReentrancyGuard {
     }
 
     /**
-     * @dev Function to pause or unpause the minting functionality of the contract.
+     * @dev Function to turn on or off functionality of the contract.
      * Only callable by an admin.
-     * @param _paused Boolean indicating whether the contract should be paused.
+     * @param _on Boolean indicating whether the contract function should be on or off.
      */
-    function setPaused(bool _paused) external {
+    function setOn(bool _on) external {
         require(hasRole(_ADMIN, _msgSender()), "Contract: Need Admin");
-        paused = _paused;
+        paused = _on;
     }
 
     /**
      * @dev Modifier to ensure that the contract is not paused before executing the function.
      */
-    modifier pause() {
+    modifier onOff() {
         require(!paused, "Minting NFT and Tokens is disabled");
         _;
     }
@@ -114,7 +120,7 @@ contract NFT is ERC721URIStorage, AccessControl, ReentrancyGuard {
      * @param _level The level of the NFT to be minted (1 for Gold, 2 for Silver, 3 for Bronze).
      * @return The tokenId of the newly minted NFT.
      */
-    function mintNFTAndToken (uint256 _level) pause nonReentrant public payable returns (uint256) {
+    function mintNFTAndToken (uint256 _level) onOff nonReentrant public payable returns (uint256) {
         require(_level >= 1 && _level <= 3, "Invalid level");
         require(!nftOwnerInfo[_msgSender()].hasNFT, "Can't mint more than one NFT");
     
@@ -127,17 +133,17 @@ contract NFT is ERC721URIStorage, AccessControl, ReentrancyGuard {
     
         // Update level-specific supply and check cap
         if (_level == 1) {
-            require(msg.value == 0.025 ether, "Need Ether");
+            require(msg.value == lvlOnePurchasePrice, "Need Ether");
             require(supplyInfo.goldSupply++ < supplyInfo.goldCap, "NFT: Gold supply cap exceeded");
-            Iface.mintTo(_msgSender(), 10000 ether);
+            Iface.mintTo(_msgSender(), tokenAmtPerLvlOnePurchase);
         } else if (_level == 2) {
-            require(msg.value == 0.015 ether);
+            require(msg.value == lvlTwoPurchasePrice);
             require(supplyInfo.silverSupply++ < supplyInfo.silverCap, "NFT: Silver supply cap exceeded");
-            Iface.mintTo(_msgSender(), 5000 ether);
+            Iface.mintTo(_msgSender(), tokenAmtPerLvlTwoPurchase);
         } else if (_level == 3) {
-            require(msg.value == 0.0085 ether);
+            require(msg.value == lvlThreePurchasePrice);
             require(supplyInfo.bronzeSupply++ < supplyInfo.bronzeCap, "NFT: Bronze supply cap exceeded");
-            Iface.mintTo(_msgSender(), 1000 ether);
+            Iface.mintTo(_msgSender(), tokenAmtPerLvlThreePurchase);
         }
 
         nftOwnerInfo[_msgSender()] = NFTOwnerInfo({ level: _level, hasNFT: true });
@@ -167,15 +173,15 @@ contract NFT is ERC721URIStorage, AccessControl, ReentrancyGuard {
         // Update level-specific supply and check cap
         if (_level == 1) {
             require(Iface.balanceOf(_msgSender()) >= tokenBalanceRequired, "Token Balance");
-            require(msg.value == 0.025 ether, "Need Ether");
+            require(msg.value == lvlOnePurchasePrice, "Need Ether");
             require(supplyInfo.goldSupply++ < supplyInfo.goldCap, "NFT: Gold supply cap exceeded");
         } else if (_level == 2) {
             require(Iface.balanceOf(_msgSender()) >= tokenBalanceRequired);
-            require(msg.value == 0.015 ether);
+            require(msg.value == lvlTwoPurchasePrice);
             require(supplyInfo.silverSupply++ < supplyInfo.silverCap, "NFT: Silver supply cap exceeded");
         } else if (_level == 3) {
             require(Iface.balanceOf(_msgSender()) >= tokenBalanceRequired);
-            require(msg.value == 0.0085 ether);
+            require(msg.value == lvlThreePurchasePrice);
             require(supplyInfo.bronzeSupply++ < supplyInfo.bronzeCap, "NFT: Bronze supply cap exceeded");
         }
 
@@ -273,6 +279,18 @@ contract NFT is ERC721URIStorage, AccessControl, ReentrancyGuard {
     function setIfaceAddress(address _ifaceAddress) external {
         require(hasRole(_ADMIN, _msgSender()), "NFT: Need Admin");
         Iface = iface(_ifaceAddress);
+    }
+
+    function setLvlPurchasePrices(uint256 _lvlOne, uint256 _lvlTwo, uint256 _lvlThree) external onlyRole(_ADMIN) {
+        lvlOnePurchasePrice = _lvlOne;
+        lvlTwoPurchasePrice = _lvlTwo;
+        lvlThreePurchasePrice = _lvlThree;
+    }
+
+    function setTknAmtPerLvl(uint256 _lvlOne, uint256 _lvlTwo, uint256 _lvlThree) external onlyRole(_ADMIN) {
+        tokenAmtPerLvlOnePurchase = _lvlOne;
+        tokenAmtPerLvlTwoPurchase = _lvlTwo;
+        tokenAmtPerLvlThreePurchase = _lvlThree;      
     }
 
     //--------------Hash functions---------------------------
