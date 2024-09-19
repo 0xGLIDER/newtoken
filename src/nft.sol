@@ -37,7 +37,6 @@ contract NFT is ERC721URIStorage, AccessControl, ReentrancyGuard {
     uint256 public tokenAmtPerLvlOnePurchase = 1e22;
     uint256 public tokenAmtPerLvlTwoPurchase = 5e21;
     uint256 public tokenAmtPerLvlThreePurchase = 1e21;
-    address public vault; // Address where the transaction fees are sent
     bytes32 public constant _MINT = keccak256("_MINT"); // Role identifier for minting
     bytes32 public constant _ADMIN = keccak256("_ADMIN"); // Role identifier for admin functions
     bytes32 public constant _RESCUE = keccak256("_RESCUE"); //Role indentifier for rescue functions
@@ -63,26 +62,17 @@ contract NFT is ERC721URIStorage, AccessControl, ReentrancyGuard {
     // Mapping from user address to their NFT ownership information
     mapping(address => NFTOwnerInfo) public nftOwnerInfo;
 
-    /**
-     * @dev Constructor to initialize the NFT contract with the base URI, token contract, required token balance, vault address, and iface address.
-     * @param _tokenURI The base URI for the NFTs.
-     * @param _tokenContract The address of the required ERC20 token contract.
-     * @param _setTokenBalanceRequired The minimum balance of tokens required to mint an NFT.
-     * @param _setVault The address where transaction fees will be sent.
-     * @param _ifaceAddress The address of the iface contract for minting ERC20 tokens.
-     */
+ 
     constructor(
         string memory _tokenURI, 
         IERC20 _tokenContract, 
         uint256 _setTokenBalanceRequired,  
-        address _setVault,
         address _ifaceAddress
         ) ERC721("NewNFT", "NFT") {
         currentTokenURI = _tokenURI;
         token = _tokenContract;
         tokenBalanceRequired = _setTokenBalanceRequired;
         txFee = 1.5e19;
-        vault = _setVault;
         Iface = iface(_ifaceAddress); 
         supplyInfo = SupplyInfo({
             goldCap: 50, 
