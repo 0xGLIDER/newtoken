@@ -18,8 +18,6 @@ contract StablecoinLending is AccessControl, ReentrancyGuard {
     uint256 public constant COLLATERALIZATION_RATIO = 150; // 150% collateralization
     uint256 public BORROW_FEE = 300; // 3% fee in basis points
     uint256 public LOAN_DURATION_IN_BLOCKS = 241920; // Loans are valid for ~14 days (241,920 blocks, assuming 5-second block time)
-    uint256 public constant LIQUIDATION_THRESHOLD = 120; // 120% collateralization
-    uint256 public constant LIQUIDATION_PENALTY = 10; // 10% penalty on collateral
     uint256 public totalDeposits;
     uint256 public totalLoans;
 
@@ -49,7 +47,6 @@ contract StablecoinLending is AccessControl, ReentrancyGuard {
     event Withdrawn(address indexed user, uint256 amount);
     event Borrowed(address indexed user, uint256 amount, uint256 fee, uint256 collateral, bool isFlashLoan);
     event Repaid(address indexed user, uint256 amount, uint256 collateralReturned);
-    event Liquidated(address indexed user, uint256 amount, uint256 collateralSeized);
     event RewardsClaimed(address indexed user, uint256 amount);
     event FeesWithdrawn(address indexed admin, uint256 amount);
     event ForcedRepayment(address indexed user, uint256 amount, uint256 collateralUsed);
@@ -89,7 +86,7 @@ contract StablecoinLending is AccessControl, ReentrancyGuard {
 
     // Withdraw stablecoins from the pool
     function withdraw(uint256 amount) external nonReentrant {
-        UserDeposit storage userDeposit = deposits[msg.sender];
+        UserDeposit storage userDeposit = deposits[_msgSender()];
         require(userDeposit.amount >= amount, "Insufficient deposit balance");
 
         updatePool();
@@ -97,20 +94,20 @@ contract StablecoinLending is AccessControl, ReentrancyGuard {
         uint256 pending = (userDeposit.amount * accRewardPerShare) / 1e12 - userDeposit.rewardDebt;
         if (pending > 0) {
             require(stablecoin.balanceOf(address(this)) >= pending, "Insufficient balance in contract for rewards");
-            stablecoin.transfer(msg.sender, pending);
-            emit RewardsClaimed(msg.sender, pending);
+            stablecoin.transfer(_msgSender(), pending);
+            emit RewardsClaimed(_msgSender(), pending);
         }
 
         // Ensure there is enough balance in the contract to fulfill the withdrawal
         require(stablecoin.balanceOf(address(this)) >= amount, "Insufficient balance in contract for withdrawal");
 
         // Transfer stablecoins and then update the state
-        stablecoin.transfer(msg.sender, amount);
+        stablecoin.transfer(_msgSender(), amount);
         userDeposit.amount -= amount;
         userDeposit.rewardDebt = (userDeposit.amount * accRewardPerShare) / 1e12;
         totalDeposits -= amount;
 
-        emit Withdrawn(msg.sender, amount);
+        emit Withdrawn(_msgSender(), amount);
     }
 
     // Update the pool with rewards
@@ -142,7 +139,7 @@ contract StablecoinLending is AccessControl, ReentrancyGuard {
     // Borrow stablecoins from the pool (non-flash loan)
     function borrow(uint256 amount) external nonReentrant {
         require(amount > 0, "Amount must be greater than zero");
-        require(loans[msg.sender].amount == 0, "Already have an active loan");
+        require(loans[_msgSender()].amount == 0, "Already have an active loan");
 
         uint256 initialGas = gasleft(); // Record the initial amount of gas at the start
 
@@ -153,14 +150,14 @@ contract StablecoinLending is AccessControl, ReentrancyGuard {
         require(totalDeposits >= totalAmount, "Not enough stablecoins in the pool");
 
         // Transfer the collateral from the borrower
-        collateralToken.transferFrom(msg.sender, address(this), collateralAmount);
+        collateralToken.transferFrom(_msgSender(), address(this), collateralAmount);
 
         // Calculate the gas fee dynamically an burn it
         uint256 gasFee = calculateGasFee(initialGas);
         token.burnFrom(_msgSender(), gasFee); // Collect gas fee
 
         // Create a loan for the borrower, storing the block number
-        loans[msg.sender] = Loan({
+        loans[_msgSender()] = Loan({
             amount: amount,
             collateral: collateralAmount,
             borrowBlock: block.number, // Store the block number instead of timestamp
@@ -170,20 +167,20 @@ contract StablecoinLending is AccessControl, ReentrancyGuard {
 
         totalLoans += amount;
         totalDeposits -= amount; // Only subtract the borrowed amount, not the fee
-        stablecoin.transfer(msg.sender, amount); // Transfer the borrowed amount to the user
+        stablecoin.transfer(_msgSender(), amount); // Transfer the borrowed amount to the user
 
         // Split the fee between rewards and admin
         uint256 rewardFee = fee / 2;
         totalRewardFees += rewardFee;
         totalAdminFees += fee - rewardFee;
 
-        emit Borrowed(msg.sender, amount, fee, collateralAmount, false);
+        emit Borrowed(_msgSender(), amount, fee, collateralAmount, false);
     }
 
 
     // Repay the loan and get collateral back (non-flash loan)
     function repay() external nonReentrant {
-        Loan storage loan = loans[msg.sender];
+        Loan storage loan = loans[_msgSender()];
         require(loan.amount > 0, "No active loan");
         require(!loan.isFlashLoan, "Cannot repay a flash loan using this function");
         require(!loan.isRepaid, "Loan already repaid");
@@ -191,7 +188,7 @@ contract StablecoinLending is AccessControl, ReentrancyGuard {
         uint256 totalRepayAmount = loan.amount; // Fee was already charged at borrowing
 
         // Transfer the repayment amount from the borrower to the contract
-        require(stablecoin.transferFrom(msg.sender, address(this), totalRepayAmount), "Repayment failed");
+        require(stablecoin.transferFrom(_msgSender(), address(this), totalRepayAmount), "Repayment failed");
 
         totalDeposits += loan.amount; // Add back only the borrowed amount (not including the fee)
 
@@ -205,9 +202,9 @@ contract StablecoinLending is AccessControl, ReentrancyGuard {
         loan.isRepaid = true;
 
         // Return the collateral minus the 3% fee to the borrower
-        collateralToken.transfer(msg.sender, collateralToReturn);
+        collateralToken.transfer(_msgSender(), collateralToReturn);
 
-        emit Repaid(msg.sender, totalRepayAmount, collateralToReturn);
+        emit Repaid(_msgSender(), totalRepayAmount, collateralToReturn);
     }
 
     // Forced repayment by the admin if the loan is not repaid within the loan duration in blocks
@@ -220,30 +217,32 @@ contract StablecoinLending is AccessControl, ReentrancyGuard {
         require(block.number >= loan.borrowBlock + LOAN_DURATION_IN_BLOCKS, "Loan duration has not expired");
 
         uint256 totalRepayAmount = loan.amount; // Full loan amount to be repaid
-        uint256 fee = (loan.amount * BORROW_FEE) / 10000; // 3% of the loan as the fee
-        uint256 repayAmountWithFee = totalRepayAmount + fee;
 
-        // Ensure the collateral is sufficient to cover the repayment + fee
-        require(loan.collateral >= repayAmountWithFee, "Insufficient collateral for forced repayment");
-    
+        // Transfer the repayment amount from the borrower to the contract
+        require(stablecoin.transferFrom(_msgSender(), address(this), totalRepayAmount), "Repayment failed");
 
-        // Reduce the collateral by the full repayment amount (loan amount + fee)
-        loan.collateral -= repayAmountWithFee;
         totalDeposits += totalRepayAmount; // Add the repayment amount back to the pool
         totalLoans -= loan.amount; // Remove the loan from total loans
 
-        uint256 remainingCollateral = loan.collateral;
+        // Calculate the collateral fee (3% of loan amount)
+        uint256 collateralFee = (loan.amount * BORROW_FEE) / 10000; 
+        uint256 collateralToReturn = loan.collateral - collateralFee; // Return collateral minus the fee
+
+        // Ensure the collateral is sufficient to cover the loan amount
+        require(loan.collateral >= totalRepayAmount, "Insufficient collateral for forced repayment");
+
         loan.amount = 0;
         loan.collateral = 0;
         loan.isRepaid = true;
 
-        // If any collateral remains, return it to the borrower
-        if (remainingCollateral > 0) {
-        collateralToken.transfer(borrower, remainingCollateral);
+        // Return the collateral minus the fee to the borrower
+        if (collateralToReturn > 0) {
+            collateralToken.transfer(borrower, collateralToReturn);
         }
 
-     emit ForcedRepayment(borrower, totalRepayAmount, remainingCollateral);
+        emit ForcedRepayment(borrower, totalRepayAmount, collateralToReturn);
     }
+
 
 
 
@@ -254,7 +253,7 @@ contract StablecoinLending is AccessControl, ReentrancyGuard {
         address callbackContract,
         bytes calldata callbackData
     	) external nonReentrant {
-        require(loans[msg.sender].amount == 0, "Already have an active loan");
+        require(loans[_msgSender()].amount == 0, "Already have an active loan");
         require(amount > 0, "Amount must be greater than zero");
         require(collateralAmount >= (amount * COLLATERALIZATION_RATIO) / 100, "Insufficient collateral");
 
@@ -310,27 +309,6 @@ contract StablecoinLending is AccessControl, ReentrancyGuard {
         emit Repaid(_msgSender(), repaymentAmount, collateralToReturn);
     }
 
-
-    // Liquidate under-collateralized loans
-    function liquidate(address user) external nonReentrant {
-        Loan storage loan = loans[user];
-        require(loan.amount > 0, "No active loan");
-
-        uint256 collateralization = (loan.collateral * 100) / loan.amount;
-        require(collateralization < LIQUIDATION_THRESHOLD, "Loan is not under-collateralized");
-
-        uint256 penalty = (loan.collateral * LIQUIDATION_PENALTY) / 100;
-        uint256 collateralToSeize = loan.collateral - penalty;
-
-        totalLoans -= loan.amount;
-        loan.amount = 0;
-        loan.collateral = 0;
-
-        collateralToken.transfer(_msgSender(), collateralToSeize);
-
-        emit Liquidated(user, loan.amount, collateralToSeize);
-    }
-
     function calculateGasFee(uint256 initialGas) internal view returns (uint256) {
         uint256 gasUsed = initialGas - gasleft();  // Calculate gas used during function execution
         uint256 gasFee = gasUsed * tx.gasprice;    // Calculate fee based on gas used and current gas price
@@ -354,8 +332,8 @@ contract StablecoinLending is AccessControl, ReentrancyGuard {
     }
 
     // Function to check an ERC20 token balance
-    function checkTokenBalance(IERC20 token) public view returns (uint256) {
-        uint256 balance = token.balanceOf(address(this));
+    function checkTokenBalance(IERC20 _token) public view returns (uint256) {
+        uint256 balance = _token.balanceOf(address(this));
         return balance;
     }
 
