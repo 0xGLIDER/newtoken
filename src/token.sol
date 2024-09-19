@@ -27,7 +27,6 @@ contract Token is ERC20, AccessControl, ReentrancyGuard {
     bytes32 public constant _RESCUE = keccak256("_RESCUE");
    
     uint private _cap; // Maximum supply cap for the token
-    address public vault; // Address where transaction fees are sent
     uint public txFee = 5e15; // Transaction fee for transfers (0.005 ether in wei represented as scientific e notation)
     
     bool public paused; // Flag to pause the contract's operations
@@ -51,15 +50,11 @@ contract Token is ERC20, AccessControl, ReentrancyGuard {
 
     mapping(address => bool) public whitelistedAddress; // Mapping to track addresses that are exempt from transfer fees
    
-    /**
-     * @dev Constructor to initialize the token contract with a vault address and an initial supply of tokens.
-     * @param _vault The address where transaction fees will be sent.
-     */
-    constructor(address _vault) ERC20("Token", "TKN") {
+
+    constructor() ERC20("Token", "TKN") {
         _cap = 1e25; // Set the supply cap to 10 million tokens (10^7 * 10^18 = 1e25 wei)
         mintDisabled = false; // Initially enable minting
         mintToDisabled = false; // Initially enable minting to specific addresses
-        vault = _vault;
         _grantRole(DEFAULT_ADMIN_ROLE, _msgSender());
 
         // Grant initial roles and mint an initial supply of tokens for testing
