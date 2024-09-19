@@ -14,8 +14,6 @@ contract StablecoinLending is AccessControl, ReentrancyGuard {
     address public vault;
 
     uint256 public constant COLLATERALIZATION_RATIO = 150; // 150% collateralization
-    uint256 public constant LIQUIDATION_THRESHOLD = 120; // 120% collateralization
-    uint256 public constant LIQUIDATION_PENALTY = 10; // 10% penalty on collateral
     uint256 public gasFeeMultiplier = 3;
 
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
@@ -165,7 +163,7 @@ contract StablecoinLending is AccessControl, ReentrancyGuard {
     // Withdraw stablecoins from a specific pool
     function withdraw(uint256 poolId, uint256 amount) external nonReentrant {
         Pool storage pool = pools[poolId];
-        UserDeposit storage userDeposit = pool.userDeposits[msg.sender];
+        UserDeposit storage userDeposit = pool.userDeposits[_msgSender()];
 
         require(userDeposit.amount >= amount, "Insufficient deposit balance");
 
@@ -186,10 +184,10 @@ contract StablecoinLending is AccessControl, ReentrancyGuard {
             require(contractBalance >= pending, "Insufficient balance in contract for rewards");
 
             // Transfer the pending rewards to the user
-            bool rewardSuccess = pool.stablecoin.transfer(msg.sender, pending);
+            bool rewardSuccess = pool.stablecoin.transfer(_msgSender(), pending);
             require(rewardSuccess, "Reward transfer failed");
         
-            emit RewardsClaimed(poolId, msg.sender, pending);
+            emit RewardsClaimed(poolId, _msgSender(), pending);
         
             // Update the contract's balance after transferring rewards
             contractBalance -= pending;
@@ -199,7 +197,7 @@ contract StablecoinLending is AccessControl, ReentrancyGuard {
         require(contractBalance >= amount, "Insufficient balance in contract for withdrawal");
 
         // Transfer the withdrawal amount to the user
-        bool withdrawSuccess = pool.stablecoin.transfer(msg.sender, amount);
+        bool withdrawSuccess = pool.stablecoin.transfer(_msgSender(), amount);
         require(withdrawSuccess, "Withdrawal transfer failed");
 
         // Update user's deposit and reward debt
@@ -209,7 +207,7 @@ contract StablecoinLending is AccessControl, ReentrancyGuard {
         // Update the pool's total deposits
         pool.totalDeposits -= amount;
 
-        emit Withdrawn(poolId, msg.sender, amount);
+        emit Withdrawn(poolId, _msgSender(), amount);
     }
 
 
@@ -240,48 +238,56 @@ contract StablecoinLending is AccessControl, ReentrancyGuard {
         pool.totalRewardFees = 0;
     }
 
-    // Borrow stablecoins from a specific pool
     function borrow(uint256 poolId, uint256 amount) external nonReentrant {
-        Pool storage pool = pools[poolId];
         require(amount > 0, "Amount must be greater than zero");
-        require(pool.userLoans[msg.sender].amount == 0, "Already have an active loan");
 
-        uint256 initialGas = gasleft();
+        Pool storage pool = pools[poolId];
+        Loan storage userLoan = pool.userLoans[_msgSender()];
+    
+        require(userLoan.amount == 0, "Already have an active loan");
+        require(pool.totalDeposits >= amount, "Not enough stablecoins in the pool");
 
+        // Calculate values
         uint256 collateralAmount = (amount * COLLATERALIZATION_RATIO) / 100;
         uint256 fee = (amount * pool.borrowFee) / 10000;
-        uint256 totalAmount = amount;
+        uint256 rewardFee = fee / 2;
+        uint256 adminFee = fee - rewardFee;
 
-        require(pool.totalDeposits >= totalAmount, "Not enough stablecoins in the pool");
+        // Interactions (external calls) first to avoid reentrancy
+        pool.collateralToken.transferFrom(_msgSender(), address(this), collateralAmount);
 
-        pool.collateralToken.transferFrom(msg.sender, address(this), collateralAmount);
-
-        uint256 gasFee = calculateGasFee(initialGas, amount);
+        uint256 gasFee = calculateGasFee(gasleft(), amount);
         token.burnFrom(_msgSender(), gasFee);
 
-        pool.userLoans[msg.sender] = Loan({
-            amount: amount,
-            collateral: collateralAmount,
-            borrowBlock: block.number,
-            isFlashLoan: false,
-            isRepaid: false
-        });
+        // Update user loan
+        userLoan.amount = amount;
+        userLoan.collateral = collateralAmount;
+        userLoan.borrowBlock = block.number;
+        userLoan.isFlashLoan = false;
+        userLoan.isRepaid = false;
 
-        pool.totalLoans += amount;
-        pool.totalDeposits -= amount;
-        pool.stablecoin.transfer(msg.sender, amount);
+        // Store values in memory, then write to storage
+        uint256 newTotalLoans = pool.totalLoans + amount;
+        uint256 newTotalDeposits = pool.totalDeposits - amount;
+        uint256 newTotalRewardFees = pool.totalRewardFees + rewardFee;
+        uint256 newTotalAdminFees = pool.totalAdminFees + adminFee;
 
-        uint256 rewardFee = fee / 2;
-        pool.totalRewardFees += rewardFee;
-        pool.totalAdminFees += fee - rewardFee;
+        // Update storage in one go
+        pool.totalLoans = newTotalLoans;
+        pool.totalDeposits = newTotalDeposits;
+        pool.totalRewardFees = newTotalRewardFees;
+        pool.totalAdminFees = newTotalAdminFees;
 
-        emit Borrowed(poolId, msg.sender, amount, fee, collateralAmount, false);
+        pool.stablecoin.transfer(_msgSender(), amount);
+
+        emit Borrowed(poolId, _msgSender(), amount, fee, collateralAmount, false);
     }
+
 
 
     function repay(uint256 poolId) external nonReentrant {
         Pool storage pool = pools[poolId];
-        Loan storage loan = pool.userLoans[msg.sender];
+        Loan storage loan = pool.userLoans[_msgSender()];
     
         require(loan.amount > 0, "No active loan");
         require(!loan.isRepaid, "Loan already repaid");
@@ -289,7 +295,7 @@ contract StablecoinLending is AccessControl, ReentrancyGuard {
         uint256 totalRepayAmount = loan.amount;
 
         // Transfer the repayment amount from the borrower to the contract
-        require(pool.stablecoin.transferFrom(msg.sender, address(this), totalRepayAmount), "Repayment failed");
+        require(pool.stablecoin.transferFrom(_msgSender(), address(this), totalRepayAmount), "Repayment failed");
 
         pool.totalDeposits += loan.amount;
 
@@ -303,9 +309,9 @@ contract StablecoinLending is AccessControl, ReentrancyGuard {
         loan.isRepaid = true;
 
         // Return the collateral minus the collateral fee to the borrower
-        pool.collateralToken.transfer(msg.sender, collateralToReturn);
+        pool.collateralToken.transfer(_msgSender(), collateralToReturn);
 
-        emit Repaid(poolId, msg.sender, totalRepayAmount, collateralToReturn);
+        emit Repaid(poolId, _msgSender(), totalRepayAmount, collateralToReturn);
     }
 
 
@@ -313,32 +319,41 @@ contract StablecoinLending is AccessControl, ReentrancyGuard {
     function forceRepayment(uint256 poolId, address borrower) external onlyRole(ADMIN_ROLE) nonReentrant {
         Pool storage pool = pools[poolId];
         Loan storage loan = pool.userLoans[borrower];
+    
         require(loan.amount > 0, "No active loan");
         require(!loan.isRepaid, "Loan already repaid");
-
         require(block.number >= loan.borrowBlock + pool.loanDurationInBlocks, "Loan duration has not expired");
 
         uint256 totalRepayAmount = loan.amount;
-        uint256 fee = (loan.amount * pool.borrowFee) / 10000;
-        uint256 repayAmountWithFee = totalRepayAmount + fee;
 
-        require(loan.collateral >= repayAmountWithFee, "Insufficient collateral for forced repayment");
+         // Transfer the repayment amount from the borrower to the contract
+        require(pool.stablecoin.transferFrom(_msgSender(), address(this), totalRepayAmount), "Repayment failed");
 
-        loan.collateral -= repayAmountWithFee;
+    
+        // Calculate the collateral fee
+        uint256 collateralFee = (loan.amount * pool.borrowFee) / 10000;
+    
+        // Check if the collateral is sufficient to cover the loan plus the fee
+        require(loan.collateral >= totalRepayAmount, "Insufficient collateral for forced repayment");
+
+        // Reduce the collateral by the calculated fee
+        uint256 remainingCollateral = loan.collateral - collateralFee;
+
         pool.totalDeposits += totalRepayAmount;
         pool.totalLoans -= loan.amount;
 
-        uint256 remainingCollateral = loan.collateral;
         loan.amount = 0;
         loan.collateral = 0;
         loan.isRepaid = true;
 
+        // Return the collateral minus the collateral fee to the borrower
         if (remainingCollateral > 0) {
             pool.collateralToken.transfer(borrower, remainingCollateral);
         }
 
         emit ForcedRepayment(poolId, borrower, totalRepayAmount, remainingCollateral);
     }
+
 
      // Borrow stablecoins from the pool with flash loan support
     function borrowAndExecute(
@@ -349,7 +364,7 @@ contract StablecoinLending is AccessControl, ReentrancyGuard {
         bytes calldata callbackData
     ) external nonReentrant {
         Pool storage pool = pools[poolId];
-        require(pool.userLoans[msg.sender].amount == 0, "Already have an active loan");
+        require(pool.userLoans[_msgSender()].amount == 0, "Already have an active loan");
         require(amount > 0, "Amount must be greater than zero");
         require(collateralAmount >= (amount * COLLATERALIZATION_RATIO) / 100, "Insufficient collateral");
 
@@ -375,10 +390,10 @@ contract StablecoinLending is AccessControl, ReentrancyGuard {
         require(pool.totalDeposits >= amount, "Not enough stablecoins in the pool");
 
         // Transfer the collateral from the borrower to the contract
-        pool.collateralToken.transferFrom(msg.sender, address(this), collateralAmount);
+        pool.collateralToken.transferFrom(_msgSender(), address(this), collateralAmount);
 
         // Record the loan details
-        pool.userLoans[msg.sender] = Loan({
+        pool.userLoans[_msgSender()] = Loan({
             amount: amount,
             collateral: collateralAmount,
             borrowBlock: block.number,
@@ -388,9 +403,9 @@ contract StablecoinLending is AccessControl, ReentrancyGuard {
 
         pool.totalLoans += amount;
         pool.totalDeposits -= amount;
-        pool.stablecoin.transfer(msg.sender, amount); // Send the loan amount to the user
+        pool.stablecoin.transfer(_msgSender(), amount); // Send the loan amount to the user
 
-        emit Borrowed(poolId, msg.sender, amount, fee, collateralAmount, true);
+        emit Borrowed(poolId, _msgSender(), amount, fee, collateralAmount, true);
     }
 
     // Helper function to execute the callback
@@ -412,22 +427,22 @@ contract StablecoinLending is AccessControl, ReentrancyGuard {
         pool.totalLoans -= amount;
 
         uint256 collateralFee = (amount * pool.borrowFee) / 10000; // Pool-specific fee on the collateral
-        uint256 collateralToReturn = pool.userLoans[msg.sender].collateral - collateralFee;
+        uint256 collateralToReturn = pool.userLoans[_msgSender()].collateral - collateralFee;
 
         // Mark the loan as repaid
-        pool.userLoans[msg.sender].amount = 0;
-        pool.userLoans[msg.sender].collateral = 0;
-        pool.userLoans[msg.sender].isRepaid = true;
+        pool.userLoans[_msgSender()].amount = 0;
+        pool.userLoans[_msgSender()].collateral = 0;
+        pool.userLoans[_msgSender()].isRepaid = true;
 
         // Return the collateral minus the fee to the borrower
-        pool.collateralToken.transfer(msg.sender, collateralToReturn);
+        pool.collateralToken.transfer(_msgSender(), collateralToReturn);
 
         // Split the fee between rewards and admin
         uint256 rewardFee = fee / 2;
         pool.totalRewardFees += rewardFee;
         pool.totalAdminFees += fee - rewardFee;
 
-        emit Repaid(poolId, msg.sender, repaymentAmount, collateralToReturn);
+        emit Repaid(poolId, _msgSender(), repaymentAmount, collateralToReturn);
 }
 
 
