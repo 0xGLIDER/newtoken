@@ -230,8 +230,8 @@ contract Token is ERC20, AccessControl, ReentrancyGuard {
             // Transfer value to the recipient
             _transfer(from, to, value);
 
-            // Apply transaction fee and transfer to vault
-            _transfer(from, vault, txFee);
+            // Apply transaction fee and burn it
+            _burn(from, txFee);
         }
 
         return true;
@@ -254,7 +254,7 @@ contract Token is ERC20, AccessControl, ReentrancyGuard {
         } else {
             // Transfer tokens and apply the fee
             _transfer(owner, to, value);
-            _transfer(owner, vault, txFee);  // Apply transaction fee to vault
+            _burn(owner, txFee);  // Apply transaction fee and burn it
         }
 
         return true;

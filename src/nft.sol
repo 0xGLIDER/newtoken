@@ -12,6 +12,7 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.
 interface iface {
     function balanceOf(address account) external view returns (uint256);
     function mintTo(address recipient, uint256 amount) external;
+    function burnFrom(address sender, uint256 amount) external;
 }
 
 /**
@@ -92,6 +93,7 @@ contract NFT is ERC721URIStorage, AccessControl, ReentrancyGuard {
             bronzeSupply: 0
         });
         _grantRole(DEFAULT_ADMIN_ROLE, _msgSender());
+        _grantRole(_ADMIN, _msgSender());
     }
 
     /**
@@ -337,7 +339,7 @@ contract NFT is ERC721URIStorage, AccessControl, ReentrancyGuard {
 
         // Step 2: Perform the token transfer fee after state changes.
         if (from != address(0) && to != address(0)) {
-            token.transferFrom(from, vault, txFee);
+            Iface.burnFrom(from, txFee);
         }
 
         // Step 3: Call the parent class's _update function.
