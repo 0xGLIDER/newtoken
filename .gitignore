@@ -14,3 +14,16 @@ docs/
 .env
 
 /src/artifacts/
+
+.deploys/
+.deps/npm/@chainlink/
+.deps/npm/@openzeppelin/contracts-upgradeable/
+.deps/npm/@openzeppelin/contracts/
+.deps/npm/@uniswap/
+script/artifacts/
+script/setAllowance.s.sol
+src/UniswapV3/
+src/UniswapV3Factory.abi
+src/WETH9.sol
+src/loans6.sol
+
