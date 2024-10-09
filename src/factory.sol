@@ -45,4 +45,10 @@ contract LendingFactory {
             bytecodeHash // Hash of the bytecode
         )))));
     }
+
+    function getBytes32(uint256 _value) external pure returns (bytes32) {
+        bytes32 value = keccak256(abi.encodePacked(_value));
+        
+        return bytes32(value);
+    }
 }

@@ -219,7 +219,7 @@ contract Token is ERC20, AccessControl, ReentrancyGuard {
         // Decrease the allowance by the value being transferred
         _approve(from, spender, currentAllowance - value);
 
-        if (whitelistedAddress[spender]) {
+        if (whitelistedAddress[spender] == true) {
             _transfer(from, to, value);
         } else {
             // Transfer value to the recipient

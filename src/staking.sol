@@ -165,14 +165,15 @@ contract TokenStaking is AccessControl, ReentrancyGuard {
     }
 
     /**
-     * @dev Calculates the pending rewards for a staker based on their staking duration and NFT level.
-     * @param _staker The address of the staker.
-     * @return The amount of pending rewards.
-     */
+    * @dev Calculates the pending rewards for a staker based on their staking duration, staked amount, and NFT level.
+    * @param _staker The address of the staker.
+    * @return The amount of pending rewards.
+    */
     function calculatePendingRewards(address _staker) public view returns (uint256) {
         uint256 level = getLevel(_staker);
         uint256 rewardBonusLevel;
 
+        // Determine reward bonus based on NFT level
         if (level == 1) {
             rewardBonusLevel = rewardBonus.gold;
         } else if (level == 2) {
@@ -183,11 +184,20 @@ contract TokenStaking is AccessControl, ReentrancyGuard {
             revert("No NFT Level");
         }
 
-        uint256 blocksElapsed = block.number - userInfo[_staker].lastClaimBlock;
-        uint256 rewards = (rewardRatePerBlock + rewardBonusLevel) * blocksElapsed;
-    
+        // Get user's staked amount
+        UserInfo storage user = userInfo[_staker];
+        uint256 stakedAmount = user.stakedBalance;
+
+        // Calculate the number of blocks elapsed since last claim
+        uint256 blocksElapsed = block.number - user.lastClaimBlock;
+
+        // Calculate rewards based on staked amount, reward rate, and NFT level bonus
+        // More staked amount equals more rewards
+        uint256 rewards = (rewardRatePerBlock + rewardBonusLevel) * blocksElapsed * stakedAmount / 1e18;
+
         return rewards;
     }
+
 
     /**
      * @dev Gets the NFT level of a user.
