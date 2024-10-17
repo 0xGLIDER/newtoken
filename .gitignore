@@ -28,5 +28,4 @@ src/WETH9.sol
 src/loans6.sol
 .deps/
 script/
-lib/
 src/hello.sol
