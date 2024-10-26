@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "./loans9.sol";
+import "./loans12.sol";
 import "./ERC20Factory.sol";
 
 contract LendingPoolFactory {
@@ -28,6 +28,9 @@ contract LendingPoolFactory {
         // Deploy the new lending pool contract
         MergedStablecoinLending newPool = new MergedStablecoinLending(stablecoin, collateralToken, token, erc20Factory);
 
+        newPool.grantRole(newPool.DEFAULT_ADMIN_ROLE(), msg.sender);
+        newPool.revokeRole(newPool.DEFAULT_ADMIN_ROLE(), address(this));
+
         // Initialize the pool and create the ERC20 token for deposit shares
         newPool.initializePool(depositTokenName, depositTokenSymbol);
 
@@ -52,4 +55,5 @@ contract LendingPoolFactory {
     function getAllPools() external view returns (address[] memory) {
         return allPools;
     }
+
 }

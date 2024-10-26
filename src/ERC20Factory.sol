@@ -11,6 +11,7 @@ contract ERC20Factory {
 
         // Grant the MINTER_ROLE to the lending pool
         token.grantRole(token.MINTER_ROLE(), lendingpool);
+        token.grantRole(token.BURNER_ROLE(), lendingpool);
 
         // Transfer the DEFAULT_ADMIN_ROLE to the owner's wallet (or pool deployer)
         token.grantRole(token.DEFAULT_ADMIN_ROLE(), msg.sender);

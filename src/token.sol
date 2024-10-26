@@ -9,11 +9,12 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /**
- * @title Token
- * @dev This contract implements an ERC20 token with additional features such as minting, burning, pausing, supply capping,
- * and transfer fee mechanisms. It uses role-based access control for administrative functions and is protected against reentrancy attacks.
+ * @title equalfiToken
+ * @dev This contract implements an ERC20 token with additional features such as minting, burning, pausing, 
+ * supply capping, and transfer fee mechanisms. It uses role-based access control for administrative functions 
+ * and is protected against reentrancy attacks.
  */
-contract Token is ERC20, AccessControl, ReentrancyGuard {
+contract equalfiToken is ERC20, AccessControl, ReentrancyGuard {
 
     using SafeERC20 for IERC20;
     
@@ -27,7 +28,7 @@ contract Token is ERC20, AccessControl, ReentrancyGuard {
     bytes32 public constant _RESCUE = keccak256("_RESCUE");
    
     uint private _cap; // Maximum supply cap for the token
-    uint public txFee = 5e15; // Transaction fee for transfers (0.005 ether in wei represented as scientific e notation)
+    uint public txFee = 5e15; // Transaction fee for transfers (0.005 ether in wei)
     
     bool public paused; // Flag to pause the contract's operations
     bool public mintDisabled; // Flag to disable minting
@@ -48,20 +49,25 @@ contract Token is ERC20, AccessControl, ReentrancyGuard {
     event ETHRescued(address _dest, uint _blockHeight, uint _amount);
     event ERC20Rescued(IERC20 _token, uint _blockHeight, address _dest, uint _amount);
 
-    mapping(address => bool) public whitelistedAddress; // Mapping to track addresses that are exempt from transfer fees
-   
+    mapping(address => bool) public whitelistedAddress; // Mapping to track addresses exempt from transfer fees
 
+    /**
+     * @dev Constructor that sets the token name, symbol, and initial minting.
+     * It also grants necessary roles to the deployer and sets initial parameters such as the supply cap.
+     */
     constructor() ERC20("Token", "TKN") {
         _cap = 1e25; // Set the supply cap to 10 million tokens (10^7 * 10^18 = 1e25 wei)
         mintDisabled = false; // Initially enable minting
         mintToDisabled = false; // Initially enable minting to specific addresses
         _grantRole(DEFAULT_ADMIN_ROLE, _msgSender());
 
-        // Grant initial roles and mint an initial supply of tokens for testing
+        // Grant initial roles to the deployer
         _grantRole(_ADMIN, _msgSender());
         _grantRole(_MINT, _msgSender());
         _grantRole(_BURN, _msgSender());
-        _mint(_msgSender(), 1e24); // Mint 1 million tokens to the deployer (1e6 * 10^18 = 1e24 wei)
+
+        // Mint 1 million tokens to the deployer for initial use (1e6 * 10^18 = 1e24 wei)
+        _mint(_msgSender(), 1e24);
     }
     
     /**
@@ -209,10 +215,16 @@ contract Token is ERC20, AccessControl, ReentrancyGuard {
         super._update(from, to, amount);
     }
 
+    /**
+     * @dev Function to transfer tokens from one address to another, applying a transaction fee unless the sender is whitelisted.
+     * The transfer will reduce the spender's allowance if applicable.
+     * @param from The address sending tokens.
+     * @param to The address receiving tokens.
+     * @param value The amount of tokens to transfer.
+     * @return True if the transfer was successful.
+     */
     function transferFrom(address from, address to, uint256 value) nonReentrant public virtual override returns (bool) {
         address spender = _msgSender();
-
-        // Check that the spender has enough allowance to transfer the tokens
         uint256 currentAllowance = allowance(from, spender);
         require(currentAllowance >= value, "ERC20: transfer amount exceeds allowance");
 
@@ -232,7 +244,6 @@ contract Token is ERC20, AccessControl, ReentrancyGuard {
         return true;
     }
 
-
     /**
     * @dev Function to transfer tokens from the caller's address to another, applying a transaction fee unless the sender is whitelisted.
     * This version includes an allowance check, which is non-standard for ERC-20 transfers.
@@ -243,7 +254,6 @@ contract Token is ERC20, AccessControl, ReentrancyGuard {
     function transfer(address to, uint256 value) nonReentrant public virtual override returns (bool) {
         address owner = _msgSender();
 
-        // If the owner is whitelisted, transfer without a fee
         if (whitelistedAddress[owner]) {
             _transfer(owner, to, value);
         } else {
@@ -255,10 +265,8 @@ contract Token is ERC20, AccessControl, ReentrancyGuard {
         return true;
     }
 
-
     /**
-     * @dev Function to add or remove an address from the whitelist.
-     * Whitelisted addresses are exempt from transfer fees.
+     * @dev Function to add or remove an address from the whitelist. Whitelisted addresses are exempt from transfer fees.
      * Only callable by an admin.
      * @param _whitelist The address to whitelist or remove from the whitelist.
      * @param _status Boolean indicating whether to add (true) or remove (false) the address from the whitelist.
