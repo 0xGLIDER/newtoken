@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "./loans13.sol";
+import "./loans14.sol";
 import "./ERC20Factory.sol";
 
 contract EqualFiLendingPoolFactory {
@@ -35,7 +35,7 @@ contract EqualFiLendingPoolFactory {
 
 
         // Initialize the pool and create the ERC20 token for deposit shares
-        newPool.initializePool(depositTokenName, depositTokenSymbol);
+        newPool.initializePool(depositTokenName, depositTokenSymbol, msg.sender);
 
         // Store the address of the deployed pool
         allPools.push(address(newPool));
