@@ -109,7 +109,7 @@ contract EqualFiLending is AccessControl, ReentrancyGuard {
      * @param name Name of the LP token.
      * @param symbol Symbol of the LP token.
      */
-    function initializePool(string memory name, string memory symbol) external onlyRole(ADMIN_ROLE) {
+    function initializePool(string memory name, string memory symbol, address admin) external onlyRole(ADMIN_ROLE) {
         require(address(depositShares) == address(0), "Pool already initialized");
 
         // Use the external factory to create the ERC20 token
@@ -118,6 +118,7 @@ contract EqualFiLending is AccessControl, ReentrancyGuard {
         // Grant the lending pool (this contract) the MINTER_ROLE and BURNER_ROLE so it can mint and burn LP tokens
         depositShares.grantRole(depositShares.MINTER_ROLE(), address(this));
         depositShares.grantRole(depositShares.BURNER_ROLE(), address(this));
+        depositShares.grantRole(depositShares.DEFAULT_ADMIN_ROLE(), admin);
        
 
         emit PoolInitialized(_msgSender(), address(depositShares));
