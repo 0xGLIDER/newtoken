@@ -58,6 +58,8 @@ contract EqualFiLending is AccessControl, ReentrancyGuard {
     uint256 public BLOCKS_IN_A_YEAR = 6307200; // Total blocks in a year at 5-second block time
     uint256 public MINIMUM_FEE_BPS = 10; // Minimum fee of 0.10% in basis points
     uint256 public FLASHLOAN_FEE_BPS = 5; // Flash loan fee of 0.05% in basis points
+    uint256 public depositCap;
+
 
     // Pool Metrics
     uint256 public totalDeposits;        // Total stablecoins deposited by users
@@ -125,8 +127,10 @@ contract EqualFiLending is AccessControl, ReentrancyGuard {
      * @param name Name of the LP token.
      * @param symbol Symbol of the LP token.
      */
-    function initializePool(string memory name, string memory symbol, address admin) external onlyRole(ADMIN_ROLE) {
+    function initializePool(string memory name, string memory symbol, address admin, uint256 depositCapAmount) external onlyRole(ADMIN_ROLE) {
         require(address(depositShares) == address(0), "Pool already initialized");
+
+        depositCap = depositCapAmount;
 
         // Use the external factory to create the ERC20 token
         depositShares = factory.createLPToken(name, symbol, address(this));
@@ -149,6 +153,8 @@ contract EqualFiLending is AccessControl, ReentrancyGuard {
     function deposit(uint256 amount) external nonReentrant {
         require(amount > 0, "Amount must be greater than zero");
         require(address(depositShares) != address(0), "Pool not initialized");
+        require(totalDeposits + amount <= depositCap, "Deposit cap exceeded");
+
 
         uint256 totalShares = depositShares.totalSupply();
         uint256 sharesToMint;

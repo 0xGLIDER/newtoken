@@ -22,6 +22,7 @@ contract EqualFiLendingPoolFactory {
         IERC20 collateralToken,
         TokenIface token,
         EqualFiLPFactory lpFactory,
+        uint256 depositCapAmount,
         string memory depositTokenName,
         string memory depositTokenSymbol
     ) external returns (address) {
@@ -35,7 +36,7 @@ contract EqualFiLendingPoolFactory {
 
 
         // Initialize the pool and create the ERC20 token for deposit shares
-        newPool.initializePool(depositTokenName, depositTokenSymbol, msg.sender);
+        newPool.initializePool(depositTokenName, depositTokenSymbol, msg.sender, depositCapAmount);
 
         // Store the address of the deployed pool
         allPools.push(address(newPool));
