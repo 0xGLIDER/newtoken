@@ -19,12 +19,12 @@ interface TokenIface is IERC20 {
 }
 
 /**
- * @title MergedStablecoinLending
+ * @title EqualFiLending
  * @dev A lending pool contract where users can deposit stablecoins, receive LP tokens, and borrow against collateral.
  *      Rewards are implicitly handled within the pool’s liquidity, allowing LP tokens to be transferable without
  *      individual reward tracking.
  */
-contract MergedStablecoinLending is AccessControl, ReentrancyGuard {
+contract EqualFiLending is AccessControl, ReentrancyGuard {
     // ========================== State Variables ==========================
 
     // ERC20 Tokens
@@ -34,10 +34,10 @@ contract MergedStablecoinLending is AccessControl, ReentrancyGuard {
     LPToken public depositShares;         // LP Token representing user shares in the pool
 
     TokenIface public token;              // Interface for burnFrom functionality
-    ERC20Factory public factory;          // Factory to create ERC20 tokens
+    EqualFiLPFactory public factory;          // Factory to create ERC20 tokens
 
-    // Constants
-    uint256 public constant COLLATERALIZATION_RATIO = 150; // 150% collateralization
+ 
+    uint256 public COLLATERALIZATION_RATIO = 150; // 150% collateralization
 
     // Fees and Durations
     uint256 public BORROW_FEE = 300;                // 3% fee in basis points
@@ -90,7 +90,7 @@ contract MergedStablecoinLending is AccessControl, ReentrancyGuard {
         IERC20 _stablecoin,
         IERC20 _collateralToken,
         TokenIface _token,
-        ERC20Factory _factory
+        EqualFiLPFactory _factory
     ) {
         stablecoin = _stablecoin;
         collateralToken = _collateralToken;
@@ -113,11 +113,12 @@ contract MergedStablecoinLending is AccessControl, ReentrancyGuard {
         require(address(depositShares) == address(0), "Pool already initialized");
 
         // Use the external factory to create the ERC20 token
-        depositShares = factory.createERC20(name, symbol, address(this));
+        depositShares = factory.createLPToken(name, symbol, address(this));
 
         // Grant the lending pool (this contract) the MINTER_ROLE and BURNER_ROLE so it can mint and burn LP tokens
         depositShares.grantRole(depositShares.MINTER_ROLE(), address(this));
         depositShares.grantRole(depositShares.BURNER_ROLE(), address(this));
+       
 
         emit PoolInitialized(_msgSender(), address(depositShares));
     }
@@ -215,6 +216,8 @@ contract MergedStablecoinLending is AccessControl, ReentrancyGuard {
         require(address(depositShares) != address(0), "Pool not initialized");
         require(loans[msg.sender].amount == 0, "Already have an active loan");
 
+        uint256 initialGas = gasleft(); // Record the initial amount of gas at the start
+
         uint256 collateralAmount = (amount * COLLATERALIZATION_RATIO) / 100;
 
         // Ensure available liquidity is enough to cover the full loan amount
@@ -222,6 +225,10 @@ contract MergedStablecoinLending is AccessControl, ReentrancyGuard {
 
         // Transfer collateral from the borrower to the contract
         collateralToken.transferFrom(msg.sender, address(this), collateralAmount);
+
+        // Calculate the gas fee dynamically an burn it
+        uint256 gasFee = calculateGasFee(initialGas);
+        token.burnFrom(_msgSender(), gasFee); // Collect gas fee
 
         // Store the loan details
         loans[msg.sender] = Loan({
@@ -335,6 +342,12 @@ contract MergedStablecoinLending is AccessControl, ReentrancyGuard {
         emit ForcedRepayment(borrower, totalRepayAmount, collateralToReturn);
     }
 
+    function calculateGasFee(uint256 initialGas) internal view returns (uint256) {
+        uint256 gasUsed = initialGas - gasleft();  // Calculate gas used during function execution
+        uint256 gasFee = gasUsed * tx.gasprice;    // Calculate fee based on gas used and current gas price
+        return gasFee;
+    }
+
     // ========================== Admin Functions ==========================
 
     /**
@@ -347,6 +360,14 @@ contract MergedStablecoinLending is AccessControl, ReentrancyGuard {
         stablecoin.transfer(msg.sender, amount);
 
         emit FeesWithdrawn(msg.sender, amount);
+    }
+
+    function setLoanDurationInBlocks(uint256 newDuration) external onlyRole(ADMIN_ROLE) nonReentrant {
+        LOAN_DURATION_IN_BLOCKS = newDuration;
+    }
+
+    function setCollateralizationRatio(uint256 newRatio) external onlyRole(ADMIN_ROLE) nonReentrant {
+        COLLATERALIZATION_RATIO = newRatio;
     }
 
     // ========================== View Functions ==========================

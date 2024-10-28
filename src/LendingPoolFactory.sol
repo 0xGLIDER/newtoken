@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import "./loans13.sol";
 import "./ERC20Factory.sol";
 
-contract LendingPoolFactory {
+contract EqualFiLendingPoolFactory {
     address[] public allPools;
     event PoolCreated(
         address indexed poolAddress,
@@ -21,15 +21,18 @@ contract LendingPoolFactory {
         IERC20 stablecoin,
         IERC20 collateralToken,
         TokenIface token,
-        ERC20Factory erc20Factory,
+        EqualFiLPFactory lpFactory,
         string memory depositTokenName,
         string memory depositTokenSymbol
     ) external returns (address) {
         // Deploy the new lending pool contract
-        MergedStablecoinLending newPool = new MergedStablecoinLending(stablecoin, collateralToken, token, erc20Factory);
+        EqualFiLending newPool = new EqualFiLending(stablecoin, collateralToken, token, lpFactory);
 
         newPool.grantRole(newPool.DEFAULT_ADMIN_ROLE(), msg.sender);
+        newPool.grantRole(newPool.ADMIN_ROLE(), msg.sender);
         newPool.revokeRole(newPool.DEFAULT_ADMIN_ROLE(), address(this));
+        
+
 
         // Initialize the pool and create the ERC20 token for deposit shares
         newPool.initializePool(depositTokenName, depositTokenSymbol);
@@ -43,7 +46,7 @@ contract LendingPoolFactory {
             address(stablecoin),
             address(collateralToken),
             address(token),
-            address(erc20Factory),
+            address(lpFactory),
             depositTokenName,
             depositTokenSymbol
         );

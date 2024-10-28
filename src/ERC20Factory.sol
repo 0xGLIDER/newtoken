@@ -4,8 +4,8 @@ pragma solidity ^0.8.0;
 import "./LPToken.sol";  // Import your custom ERC20 token
 
 // Factory for creating mintable and burnable ERC20 tokens dynamically
-contract ERC20Factory {
-    function createERC20(string memory name, string memory symbol, address lendingpool) external returns (LPToken) {
+contract EqualFiLPFactory {
+    function createLPToken(string memory name, string memory symbol, address lendingpool) external returns (LPToken) {
         // Create and return a new instance of the ERC20 token with minting and burning functionality
         LPToken token = new LPToken(name, symbol);
 
