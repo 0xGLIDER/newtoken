@@ -207,15 +207,15 @@ contract EqualFiLending is AccessControl, ReentrancyGuard {
         // Burn the shares from the user
         depositShares.burnFrom(_msgSender(), sharesToBurn);
 
-        // Transfer the stablecoin amount to the user
-        stablecoin.transfer(_msgSender(), amountToWithdraw);
-
         // Update the totalDeposits and totalDepositorFees
         totalDeposits -= userDepositedAmount;
         totalDepositorFees -= userDepositorFees;
 
         // Update availableLiquidity accordingly
         availableLiquidity -= amountToWithdraw;
+
+        // Transfer the stablecoin amount to the user
+        stablecoin.transfer(_msgSender(), amountToWithdraw);
 
         emit Withdrawn(_msgSender(), amountToWithdraw);
     }
@@ -375,6 +375,8 @@ contract EqualFiLending is AccessControl, ReentrancyGuard {
         } else if (loan.loanDuration == 4) {
            require(block.number >= loan.borrowBlock + LOAN_DURATION_IN_BLOCKS_3, "Loan duration has not expired");
            fee = (loan.amount * APY_BPS_3* LOAN_DURATION_IN_BLOCKS_3) / (BASIS_POINTS_DIVISOR * BLOCKS_IN_A_YEAR);
+        } else {
+            revert("Invalid duration");
         }
 
         // Calculate the fee (interest) using blocks
