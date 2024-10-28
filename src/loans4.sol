@@ -313,7 +313,7 @@ contract StablecoinLending is AccessControl, ReentrancyGuard {
         uint256 gasUsed = initialGas - gasleft();  // Calculate gas used during function execution
         uint256 gasFee = gasUsed * tx.gasprice;    // Calculate fee based on gas used and current gas price
         return gasFee;
-}
+    }
 
 
     // Get the details of the user's loan

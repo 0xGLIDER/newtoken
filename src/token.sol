@@ -14,7 +14,7 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
  * supply capping, and transfer fee mechanisms. It uses role-based access control for administrative functions 
  * and is protected against reentrancy attacks.
  */
-contract equalfiToken is ERC20, AccessControl, ReentrancyGuard {
+contract EqualFiToken is ERC20, AccessControl, ReentrancyGuard {
 
     using SafeERC20 for IERC20;
     
@@ -27,7 +27,7 @@ contract equalfiToken is ERC20, AccessControl, ReentrancyGuard {
     bytes32 public constant _ADMIN = keccak256("_ADMIN");
     bytes32 public constant _RESCUE = keccak256("_RESCUE");
    
-    uint private _cap; // Maximum supply cap for the token
+    uint public _cap; // Maximum supply cap for the token
     uint public txFee = 5e15; // Transaction fee for transfers (0.005 ether in wei)
     
     bool public paused; // Flag to pause the contract's operations
@@ -274,6 +274,10 @@ contract equalfiToken is ERC20, AccessControl, ReentrancyGuard {
     function setWhitelistAddress(address _whitelist, bool _status) external onlyRole(_ADMIN) {
         require(_whitelist != address(0), "Invalid address");
         whitelistedAddress[_whitelist] = _status;
+    }
+
+    function setTxFee(uint256 _newFee) external onlyRole(_ADMIN) {
+        txFee = _newFee;
     }
 
     /**
