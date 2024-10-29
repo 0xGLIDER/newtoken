@@ -1,27 +1,53 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
-import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import { AccessControl } from "@openzeppelin/contracts/access/AccessControl.sol";
+import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
+/**
+ * @title nftIface
+ * @dev Interface for interacting with the NFT contract to retrieve token URIs and ownership information.
+ */
 interface nftIface {
+    /**
+     * @dev Returns the URI of the specified NFT.
+     * @param tokenId The ID of the NFT.
+     * @return The URI string of the NFT.
+     */
     function tokenURI(uint256 tokenId) external view returns (string memory);
+
+    /**
+     * @dev Returns the NFT ownership information of a user.
+     * @param user The address of the user.
+     * @return The NFT level of the user.
+     */
     function nftOwnerInfo(address user) external view returns (uint256);
 }
 
+/**
+ * @title equalfiToken
+ * @dev Interface extending the IERC20 interface with a minting function.
+ */
 interface equalfiToken is IERC20 {
+    /**
+     * @dev Mints a specified amount of tokens to a recipient.
+     * @param recipient The address to receive the minted tokens.
+     * @param amount The number of tokens to mint.
+     */
     function mintTo(address recipient, uint256 amount) external;
 }
 
 /**
  * @title equalfiStaking
  * @dev This contract allows users to stake ERC20 tokens and claim rewards based on their staking duration.
- * It also supports NFT-based reward bonuses. The contract is protected against reentrancy attacks and uses
- * role-based access control for administrative functions.
+ *      It also supports NFT-based reward bonuses. The contract is protected against reentrancy attacks and uses
+ *      role-based access control for administrative functions.
  */
 contract equalfiStaking is AccessControl, ReentrancyGuard {
+
+    // ========================== State Variables ==========================
 
     equalfiToken public token; // ERC20 token contract used for staking, with minting capabilities
     IERC721 public nft; // ERC721 NFT contract for determining staking bonuses
@@ -33,18 +59,30 @@ contract equalfiStaking is AccessControl, ReentrancyGuard {
     uint256 public claimInterval; // Number of blocks between reward claims
     uint256 public stakeCap = 1e21; // Maximum amount a user can stake
 
-    // Role identifiers for administrative functions
-    bytes32 public constant _RESCUE = keccak256("_RESCUE"); // Role for rescuing funds mistakenly sent to the contract
-    bytes32 public constant _ADMIN = keccak256("_ADMIN"); // Admin role for managing contract settings
-    bytes32 public constant _MINTER = keccak256("_MINTER"); // Role for minting rewards to users
+    // ========================== Roles ==========================
 
-    // Structure to store individual user staking information
+    /// @notice Role identifier for rescuing funds mistakenly sent to the contract
+    bytes32 public constant _RESCUE = keccak256("_RESCUE");
+
+    /// @notice Admin role for managing contract settings
+    bytes32 public constant _ADMIN = keccak256("_ADMIN");
+
+    /// @notice Role for minting rewards to users
+    bytes32 public constant _MINTER = keccak256("_MINTER");
+
+    // ========================== Structures ==========================
+
+    /**
+     * @dev Structure to store individual user staking information.
+     */
     struct UserInfo {
         uint256 stakedBalance; // Amount of tokens staked by the user
         uint256 lastClaimBlock; // Block number when the user last claimed rewards
     }
 
-    // Structure to hold bonus reward percentages for different NFT levels
+    /**
+     * @dev Structure to hold bonus reward percentages for different NFT levels.
+     */
     struct RewardLevelBonus {
         uint256 gold;   // Bonus percentage for Gold-level NFT holders
         uint256 silver; // Bonus percentage for Silver-level NFT holders
@@ -53,16 +91,27 @@ contract equalfiStaking is AccessControl, ReentrancyGuard {
 
     RewardLevelBonus public rewardBonus; // Instance to track bonus rewards for different NFT levels
 
-    // Mapping from user address to their staking information
+    // ========================== Mappings ==========================
+
+    /// @notice Mapping from user address to their staking information
     mapping(address => UserInfo) public userInfo;
 
-    // Events to track staking, unstaking, and reward claims
+    // ========================== Events ==========================
+
+    /// @notice Emitted when a user stakes tokens
     event Staked(address indexed staker, uint256 amount);
+
+    /// @notice Emitted when a user unstakes tokens
     event Unstaked(address indexed staker, uint256 amount);
+
+    /// @notice Emitted when a user claims rewards
     event ClaimedRewards(address indexed staker, uint256 amount);
+
+    // ========================== Constructor ==========================
 
     /**
      * @dev Constructor to initialize the staking contract with the token, claim interval, NFT contract, and NFT interface.
+     *      Grants the deployer the admin roles.
      * @param _token The address of the ERC20 token contract with minting capabilities.
      * @param _claimInterval The number of blocks between reward claims.
      * @param _nft The address of the ERC721 NFT contract.
@@ -76,13 +125,15 @@ contract equalfiStaking is AccessControl, ReentrancyGuard {
         lastUpdateBlock = block.number;
         claimInterval = _claimInterval; // Set initial claim interval
         rewardBonus = RewardLevelBonus({ gold: 1e15, silver: 5e14, bronze: 2e14 }); // Set reward bonuses for different NFT levels
-        _grantRole(DEFAULT_ADMIN_ROLE, _msgSender()); // Grant the deployer the admin role
+        _grantRole(DEFAULT_ADMIN_ROLE, _msgSender()); // Grant the deployer the default admin role
         _grantRole(_ADMIN, _msgSender()); // Grant the deployer the admin role
     }
 
+    // ========================== Public Functions ==========================
+
     /**
      * @dev Public function to stake tokens. The amount to stake is specified as an argument.
-     * The nonReentrant modifier ensures that reentrancy attacks are prevented.
+     *      The nonReentrant modifier ensures that reentrancy attacks are prevented.
      * @param _amount The amount of tokens to stake.
      */
     function stake(uint256 _amount) external nonReentrant {
@@ -91,7 +142,7 @@ contract equalfiStaking is AccessControl, ReentrancyGuard {
 
     /**
      * @dev Public function to unstake tokens. The amount to unstake is specified as an argument.
-     * The nonReentrant modifier ensures that reentrancy attacks are prevented.
+     *      The nonReentrant modifier ensures that reentrancy attacks are prevented.
      * @param _amount The amount of tokens to unstake.
      */
     function unstake(uint256 _amount) external nonReentrant {
@@ -106,72 +157,7 @@ contract equalfiStaking is AccessControl, ReentrancyGuard {
     }
 
     /**
-     * @dev Internal function to handle staking logic.
-     * The user must own an NFT and have a positive staking amount.
-     * @param _amount The amount of tokens to stake.
-     */
-    function _stake(uint256 _amount) internal {
-        require(_amount > 0, "Staking: Amount must be greater than 0");
-        require(nft.balanceOf(_msgSender()) > 0, "Staking: No NFT balance");
-
-        // Transfer tokens from the user to the staking contract
-        require(token.transferFrom(_msgSender(), address(this), _amount), "Staking: Token transfer failed");
-
-        UserInfo storage user = userInfo[_msgSender()];
-        user.stakedBalance += _amount; // Update the user's staked balance
-        require(user.stakedBalance <= stakeCap, "Stake exceeds cap"); // Ensure the staked amount doesn't exceed the cap
-
-        totalStaked += _amount; // Increase the total staked amount in the contract
-        user.lastClaimBlock = block.number; // Update the block number of the last claim
-
-        emit Staked(_msgSender(), _amount); // Emit the Staked event
-    }
-
-    /**
-     * @dev Internal function to handle unstaking logic.
-     * The user must have enough staked tokens and meet the claim interval requirement.
-     * @param _amount The amount of tokens to unstake.
-     */
-    function _unstake(uint256 _amount) internal {
-        UserInfo storage user = userInfo[_msgSender()];
-        require(_amount > 0, "TokenStaking: Amount must be greater than 0");
-        require(user.stakedBalance >= _amount, "TokenStaking: Insufficient staked balance");
-        require(block.number >= user.lastClaimBlock + claimInterval, "TokenStaking: Claim interval not met");
-
-        _claimRewards(_msgSender()); // Claim pending rewards before unstaking
-
-        user.stakedBalance -= _amount; // Reduce user's staked balance
-        totalStaked -= _amount; // Reduce total staked amount in the contract
-
-        // Transfer tokens back to the user
-        require(token.transfer(_msgSender(), _amount), "TokenStaking: Unstake transfer failed");
-
-        emit Unstaked(_msgSender(), _amount); // Emit the Unstaked event
-    }
-
-    /**
-     * @dev Internal function to handle reward claiming logic.
-     * The user must meet the claim interval and have pending rewards.
-     * @param staker The address of the staker claiming rewards.
-     */
-    function _claimRewards(address staker) internal {
-        UserInfo storage user = userInfo[staker];
-        require(user.stakedBalance > 0, "TokenStaking: No staked balance");
-        require(block.number >= user.lastClaimBlock + claimInterval, "TokenStaking: Claim interval not met");
-
-        uint256 pendingRewards = calculatePendingRewards(staker);
-        require(pendingRewards > 0, "TokenStaking: No rewards to claim");
-
-        user.lastClaimBlock = block.number; // Update user's last claim block
-        totalRewards += pendingRewards; // Increase total rewards distributed
-
-        token.mintTo(staker, pendingRewards); // Mint new tokens as rewards
-
-        emit ClaimedRewards(staker, pendingRewards); // Emit the ClaimedRewards event
-    }
-
-    /**
-     * @dev Calculates the pending rewards for a staker based on staking duration and NFT ownership.
+     * @dev Public function to calculate the pending rewards for a staker.
      * @param _staker The address of the staker.
      * @return The calculated pending rewards.
      */
@@ -202,7 +188,15 @@ contract equalfiStaking is AccessControl, ReentrancyGuard {
     }
 
     /**
-     * @dev Gets the NFT level of a user based on their holdings.
+     * @dev Public function to get the current block number.
+     * @return The current block number.
+     */
+    function getBlock() external view returns (uint256) {
+        return block.number;
+    }
+
+    /**
+     * @dev Public function to get the NFT level of a user based on their holdings.
      * @param user The address of the user.
      * @return The NFT level of the user.
      */
@@ -210,8 +204,78 @@ contract equalfiStaking is AccessControl, ReentrancyGuard {
         return ifacenft.nftOwnerInfo(user);
     }
 
+    // ========================== Internal Functions ==========================
+
+    /**
+     * @dev Internal function to handle staking logic.
+     *      The user must own an NFT and have a positive staking amount.
+     * @param _amount The amount of tokens to stake.
+     */
+    function _stake(uint256 _amount) internal {
+        require(_amount > 0, "Staking: Amount must be greater than 0");
+        require(nft.balanceOf(_msgSender()) > 0, "Staking: No NFT balance");
+
+        // Transfer tokens from the user to the staking contract
+        require(token.transferFrom(_msgSender(), address(this), _amount), "Staking: Token transfer failed");
+
+        UserInfo storage user = userInfo[_msgSender()];
+        user.stakedBalance += _amount; // Update the user's staked balance
+        require(user.stakedBalance <= stakeCap, "Stake exceeds cap"); // Ensure the staked amount doesn't exceed the cap
+
+        totalStaked += _amount; // Increase the total staked amount in the contract
+        user.lastClaimBlock = block.number; // Update the block number of the last claim
+
+        emit Staked(_msgSender(), _amount); // Emit the Staked event
+    }
+
+    /**
+     * @dev Internal function to handle unstaking logic.
+     *      The user must have enough staked tokens and meet the claim interval requirement.
+     * @param _amount The amount of tokens to unstake.
+     */
+    function _unstake(uint256 _amount) internal {
+        UserInfo storage user = userInfo[_msgSender()];
+        require(_amount > 0, "TokenStaking: Amount must be greater than 0");
+        require(user.stakedBalance >= _amount, "TokenStaking: Insufficient staked balance");
+        require(block.number >= user.lastClaimBlock + claimInterval, "TokenStaking: Claim interval not met");
+
+        _claimRewards(_msgSender()); // Claim pending rewards before unstaking
+
+        user.stakedBalance -= _amount; // Reduce user's staked balance
+        totalStaked -= _amount; // Reduce total staked amount in the contract
+
+        // Transfer tokens back to the user
+        require(token.transfer(_msgSender(), _amount), "TokenStaking: Unstake transfer failed");
+
+        emit Unstaked(_msgSender(), _amount); // Emit the Unstaked event
+    }
+
+    /**
+     * @dev Internal function to handle reward claiming logic.
+     *      The user must meet the claim interval and have pending rewards.
+     * @param staker The address of the staker claiming rewards.
+     */
+    function _claimRewards(address staker) internal {
+        UserInfo storage user = userInfo[staker];
+        require(user.stakedBalance > 0, "TokenStaking: No staked balance");
+        require(block.number >= user.lastClaimBlock + claimInterval, "TokenStaking: Claim interval not met");
+
+        uint256 pendingRewards = calculatePendingRewards(staker);
+        require(pendingRewards > 0, "TokenStaking: No rewards to claim");
+
+        user.lastClaimBlock = block.number; // Update user's last claim block
+        totalRewards += pendingRewards; // Increase total rewards distributed
+
+        token.mintTo(staker, pendingRewards); // Mint new tokens as rewards
+
+        emit ClaimedRewards(staker, pendingRewards); // Emit the ClaimedRewards event
+    }
+
+    // ========================== Admin Functions ==========================
+
     /**
      * @dev Admin function to set a new reward rate per block.
+     *      Only callable by an account with the _ADMIN role.
      * @param _newRewardRatePerBlock The new reward rate per block.
      */
     function setRewardRatePerBlock(uint256 _newRewardRatePerBlock) external onlyRole(_ADMIN) {
@@ -222,6 +286,7 @@ contract equalfiStaking is AccessControl, ReentrancyGuard {
 
     /**
      * @dev Admin function to set a new claim interval in blocks.
+     *      Only callable by an account with the _ADMIN role.
      * @param _niw The new claim interval.
      */
     function setClaimInterval(uint256 _niw) external onlyRole(_ADMIN) {
@@ -230,6 +295,7 @@ contract equalfiStaking is AccessControl, ReentrancyGuard {
 
     /**
      * @dev Admin function to set a new token contract for staking.
+     *      Only callable by an account with the _ADMIN role.
      * @param _newToken The address of the new mintable ERC20 token contract.
      */
     function setToken(equalfiToken _newToken) external onlyRole(_ADMIN){
@@ -238,6 +304,7 @@ contract equalfiStaking is AccessControl, ReentrancyGuard {
 
     /**
      * @dev Admin function to set a new NFT contract.
+     *      Only callable by an account with the _ADMIN role.
      * @param _newNFT The address of the new ERC721 NFT contract.
      */
     function setNFT(IERC721 _newNFT) external onlyRole(_ADMIN) {
@@ -246,23 +313,18 @@ contract equalfiStaking is AccessControl, ReentrancyGuard {
 
     /**
      * @dev Admin function to set a new staking cap.
+     *      Only callable by an account with the _ADMIN role.
      * @param _newCap The new staking cap.
      */
     function setStakeCap(uint256 _newCap) external onlyRole(_ADMIN) {
         stakeCap = _newCap;
     }
 
-    /**
-     * @dev Returns the current block number.
-     * @return The current block number.
-     */
-    function getBlock() external view returns (uint256) {
-        return block.number;
-    }
+    // ========================== Rescue Functions ==========================
 
     /**
      * @dev Rescue function to allow recovery of ERC20 tokens mistakenly sent to the contract.
-     * Only callable by an account with the _RESCUE role.
+     *      Only callable by an account with the _RESCUE role.
      * @param _ERC20 The address of the ERC20 token to rescue.
      * @param _dest The address to send the rescued tokens to.
      * @param _ERC20Amount The amount of tokens to rescue.
@@ -273,7 +335,7 @@ contract equalfiStaking is AccessControl, ReentrancyGuard {
 
     /**
      * @dev Rescue function to allow recovery of Ether mistakenly sent to the contract.
-     * Only callable by an account with the _RESCUE role.
+     *      Only callable by an account with the _RESCUE role.
      * @param _dest The address to send the rescued Ether to.
      * @param _etherAmount The amount of Ether to rescue.
      */

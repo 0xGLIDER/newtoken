@@ -1,11 +1,33 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "./loans15.sol";
-import "./ERC20Factory.sol";
+import "./loans15.sol";         // Import main lending contract logic
+import "./ERC20Factory.sol";    // Import factory for creating LP tokens
 
+/**
+ * @title EqualFiLendingPoolFactory
+ * @dev A factory contract for creating and initializing new lending pools.
+ *      Each lending pool allows stablecoin deposits and borrowing against collateral.
+ *      This factory handles deploying the lending pool contract and setting initial parameters.
+ */
 contract EqualFiLendingPoolFactory {
-    address[] public allPools;
+
+    // ========================== State Variables ==========================
+
+    address[] public allPools;   // Array to store addresses of all deployed lending pools
+
+    // ========================== Events ==========================
+
+    /**
+     * @dev Emitted when a new lending pool is created and initialized.
+     * @param poolAddress The address of the newly created lending pool contract.
+     * @param stablecoin The stablecoin address used in the lending pool.
+     * @param collateralToken The collateral token address for securing loans.
+     * @param token The token interface for lending pool operations.
+     * @param factory The address of the factory used to create LP tokens.
+     * @param depositTokenName The name of the deposit token for LP shares.
+     * @param depositTokenSymbol The symbol of the deposit token for LP shares.
+     */
     event PoolCreated(
         address indexed poolAddress,
         address stablecoin,
@@ -16,7 +38,20 @@ contract EqualFiLendingPoolFactory {
         string depositTokenSymbol
     );
 
-    // Function to create a new lending pool and initialize it
+    // ========================== Functions ==========================
+
+    /**
+     * @dev Creates a new lending pool and initializes it with the provided parameters.
+     *      The lending pool contract is deployed, roles are set, and the pool is initialized.
+     * @param stablecoin The stablecoin address for the lending pool.
+     * @param collateralToken The collateral token address for securing loans in the pool.
+     * @param token The token interface with burn functionality used in the lending pool.
+     * @param lpFactory The address of the LP token factory contract for minting deposit tokens.
+     * @param depositCapAmount The maximum amount of tokens that can be deposited in the pool.
+     * @param depositTokenName The name of the LP token representing deposit shares.
+     * @param depositTokenSymbol The symbol of the LP token representing deposit shares.
+     * @return address The address of the newly created lending pool contract.
+     */
     function createLendingPool(
         IERC20 stablecoin,
         IERC20 collateralToken,
@@ -26,22 +61,24 @@ contract EqualFiLendingPoolFactory {
         string memory depositTokenName,
         string memory depositTokenSymbol
     ) external returns (address) {
-        // Deploy the new lending pool contract
+
+        // Deploy a new instance of the EqualFiLending contract
         EqualFiLending newPool = new EqualFiLending(stablecoin, collateralToken, token, lpFactory);
 
+        // Grant the deployer admin roles to manage the lending pool settings
         newPool.grantRole(newPool.DEFAULT_ADMIN_ROLE(), msg.sender);
         newPool.grantRole(newPool.ADMIN_ROLE(), msg.sender);
-        newPool.revokeRole(newPool.DEFAULT_ADMIN_ROLE(), address(this));
         
+        // Revoke the DEFAULT_ADMIN_ROLE from this factory for security purposes
+        newPool.revokeRole(newPool.DEFAULT_ADMIN_ROLE(), address(this));
 
-
-        // Initialize the pool and create the ERC20 token for deposit shares
+        // Initialize the lending pool with deposit token name, symbol, admin, and deposit cap
         newPool.initializePool(depositTokenName, depositTokenSymbol, msg.sender, depositCapAmount);
 
-        // Store the address of the deployed pool
+        // Store the address of the newly deployed pool
         allPools.push(address(newPool));
 
-        // Emit an event
+        // Emit an event to log pool creation details
         emit PoolCreated(
             address(newPool),
             address(stablecoin),
@@ -52,12 +89,7 @@ contract EqualFiLendingPoolFactory {
             depositTokenSymbol
         );
 
+        // Return the address of the created lending pool contract
         return address(newPool);
     }
-
-    // Function to get all deployed lending pools
-    function getAllPools() external view returns (address[] memory) {
-        return allPools;
-    }
-
 }
