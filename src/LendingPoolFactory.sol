@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "./loans15.sol";         // Import main lending contract logic
+import "./loans16.sol";         // Import main lending contract logic
 import "./ERC20Factory.sol";    // Import factory for creating LP tokens
 
 /**
@@ -57,13 +57,22 @@ contract EqualFiLendingPoolFactory {
         IERC20 collateralToken,
         TokenIface token,
         EqualFiLPFactory lpFactory,
+        ITokenSwap tokenSwap,
         uint256 depositCapAmount,
         string memory depositTokenName,
         string memory depositTokenSymbol
     ) external returns (address) {
 
         // Deploy a new instance of the EqualFiLending contract
-        EqualFiLending newPool = new EqualFiLending(stablecoin, collateralToken, token, lpFactory);
+        EqualFiLending newPool = new EqualFiLending(stablecoin, collateralToken, token, lpFactory, tokenSwap);
+
+
+        /**IERC20 _stablecoin,
+        IERC20 _collateralToken,
+        TokenIface _token,
+        EqualFiLPFactory _factory,
+        ISwapRouter _swapRouter,
+        address _weth9**/
 
         // Grant the deployer admin roles to manage the lending pool settings
         newPool.grantRole(newPool.DEFAULT_ADMIN_ROLE(), msg.sender);

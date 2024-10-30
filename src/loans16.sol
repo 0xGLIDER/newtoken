@@ -10,8 +10,15 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "./LPToken.sol";          // Custom ERC20 LP Token with Mint/Burn functionality
 import "./ERC20Factory.sol";     // Factory to create ERC20 tokens
 
-// Import Uniswap V3 Interfaces
-import "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
+// Import TokenSwap Interface
+interface ITokenSwap {
+    function swapToUSDC(
+        address inputToken,
+        uint256 amountIn,
+        uint256 amountOutMinimum,
+        uint256 deadline
+    ) external returns (uint256 amountOut);
+}
 
 /**
  * @title TokenIface
@@ -32,19 +39,21 @@ interface IFlashLoanReceiver {
 /**
  * @title EqualFiLending
  * @dev A lending pool contract where users can deposit stablecoins, receive LP tokens, and borrow against collateral.
- *      Supports flash loans with a fixed fee and now supports multiple deposit tokens via Uniswap V3 swaps.
+ *      Supports flash loans with a fixed fee.
  */
 contract EqualFiLending is AccessControl, ReentrancyGuard {
     // ========================== State Variables ==========================
 
     // ERC20 Tokens
-    IERC20 public stablecoin;             // Stablecoin used for deposits and loans (USDC)
-    IERC20 public collateralToken;        // Token used as collateral (USDC)
+    IERC20 public stablecoin;             // Stablecoin used for deposits and loans
+    IERC20 public collateralToken;        // Token used as collateral
 
     LPToken public depositShares;         // LP Token representing user shares in the pool
 
     TokenIface public token;              // Interface for burnFrom functionality
     EqualFiLPFactory public factory;      // Factory to create ERC20 tokens
+
+    ITokenSwap public tokenSwap;          // External TokenSwap contract
 
     uint256 public COLLATERALIZATION_RATIO = 150; // 150% collateralization
 
@@ -63,6 +72,7 @@ contract EqualFiLending is AccessControl, ReentrancyGuard {
     uint256 public FLASHLOAN_FEE_BPS = 5; // Flash loan fee of 0.05% in basis points
     uint256 public depositCap;
 
+
     // Pool Metrics
     uint256 public totalDeposits;        // Total stablecoins deposited by users
     uint256 public totalLoans;           // Total active loans
@@ -72,13 +82,6 @@ contract EqualFiLending is AccessControl, ReentrancyGuard {
 
     // Roles
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
-
-    // Uniswap V3 Swap Router
-    ISwapRouter public swapRouter;
-    address public WETH9; // Wrapped ETH address for Uniswap V3
-
-    // Supported Tokens
-    mapping(address => bool) public supportedTokens;
 
     // ========================== Structs ==========================
 
@@ -99,39 +102,38 @@ contract EqualFiLending is AccessControl, ReentrancyGuard {
     // ========================== Events ==========================
 
     event PoolInitialized(address indexed initializer, address depositShareToken);
-    event Deposited(address indexed user, address indexed token, uint256 amount, uint256 usdcReceived);
+    event Deposited(address indexed user, uint256 amount);
     event Withdrawn(address indexed user, uint256 amount);
     event Borrowed(address indexed user, uint256 amount, uint256 fee, uint256 collateral);
     event Repaid(address indexed user, uint256 amount, uint256 collateralReturned, uint256 feePaid);
     event FeesWithdrawn(address indexed admin, uint256 amount);
     event ForcedRepayment(address indexed user, uint256 amount, uint256 collateralUsed);
     event FlashLoan(address indexed receiver, uint256 amount, uint256 fee);
-    event SupportedTokenAdded(address indexed token);
-    event SupportedTokenRemoved(address indexed token);
-    event TokensSwapped(address indexed user, address indexed inputToken, uint256 inputAmount, uint256 outputAmount);
+    event TokensSwapped(address indexed user, address indexed inputToken, uint256 inputAmount, uint256 usdcReceived);
 
     // ========================== Constructor ==========================
 
     /**
-     * @dev Initializes the contract by setting the stablecoin, collateral token, token interface, factory, and Uniswap router.
+     * @dev Initializes the contract by setting the stablecoin, collateral token, token interface, factory, and TokenSwap.
      * Grants the deployer the default admin and admin roles.
-     * @param _swapRouter Address of the Uniswap V3 Swap Router.
-     * @param _weth9 Address of the Wrapped ETH (WETH9) token used by Uniswap V3.
+     * @param _stablecoin Address of the stablecoin used for deposits and loans.
+     * @param _collateralToken Address of the token used as collateral.
+     * @param _token Address of the TokenIface contract with burnFrom functionality.
+     * @param _factory Address of the EqualFiLPFactory used to create LP tokens.
+     * @param _tokenSwap Address of the TokenSwap contract.
      */
     constructor(
         IERC20 _stablecoin,
         IERC20 _collateralToken,
         TokenIface _token,
         EqualFiLPFactory _factory,
-        ISwapRouter _swapRouter,
-        address _weth9
+        ITokenSwap _tokenSwap
     ) {
         stablecoin = _stablecoin;
         collateralToken = _collateralToken;
         token = _token;
         factory = _factory;
-        swapRouter = _swapRouter;
-        WETH9 = _weth9;
+        tokenSwap = _tokenSwap;
 
         _grantRole(DEFAULT_ADMIN_ROLE, _msgSender());
         _grantRole(ADMIN_ROLE, _msgSender());
@@ -144,15 +146,8 @@ contract EqualFiLending is AccessControl, ReentrancyGuard {
      * Only callable once by an admin.
      * @param name Name of the LP token.
      * @param symbol Symbol of the LP token.
-     * @param admin Address to grant the DEFAULT_ADMIN_ROLE for the LP token.
-     * @param depositCapAmount Maximum amount of stablecoins that can be deposited.
      */
-    function initializePool(
-        string memory name,
-        string memory symbol,
-        address admin,
-        uint256 depositCapAmount
-    ) external onlyRole(ADMIN_ROLE) {
+    function initializePool(string memory name, string memory symbol, address admin, uint256 depositCapAmount) external onlyRole(ADMIN_ROLE) {
         require(address(depositShares) == address(0), "Pool already initialized");
 
         depositCap = depositCapAmount;
@@ -168,39 +163,17 @@ contract EqualFiLending is AccessControl, ReentrancyGuard {
         emit PoolInitialized(_msgSender(), address(depositShares));
     }
 
-    // ========================== Supported Tokens Management ==========================
-
-    /**
-     * @dev Adds a new token to the list of supported deposit tokens.
-     * @param token Address of the token to add.
-     */
-    function addSupportedToken(address token) external onlyRole(ADMIN_ROLE) {
-        require(token != address(stablecoin), "Stablecoin is already supported");
-        supportedTokens[token] = true;
-        emit SupportedTokenAdded(token);
-    }
-
-    /**
-     * @dev Removes a token from the list of supported deposit tokens.
-     * @param token Address of the token to remove.
-     */
-    function removeSupportedToken(address token) external onlyRole(ADMIN_ROLE) {
-        supportedTokens[token] = false;
-        emit SupportedTokenRemoved(token);
-    }
-
     // ========================== Deposit Function ==========================
 
     /**
-     * @dev Allows users to deposit supported tokens into the pool.
-     * If the token is not USDC, it is swapped to USDC via Uniswap V3 before depositing.
-     * LP tokens are minted proportionally based on the USDC deposited.
+     * @dev Allows users to deposit an approved token into the pool and receive LP tokens.
+     * The approved token is swapped to USDC using the TokenSwap contract before depositing.
      * @param inputToken Address of the token the user wants to deposit.
      * @param amount Amount of the input token to deposit.
      * @param amountOutMinimum Minimum amount of USDC expected from the swap to protect against slippage.
      * @param deadline Unix timestamp after which the swap is no longer valid.
      */
-    function deposit(
+    function swapDeposit(
         address inputToken,
         uint256 amount,
         uint256 amountOutMinimum,
@@ -209,10 +182,6 @@ contract EqualFiLending is AccessControl, ReentrancyGuard {
         require(amount > 0, "Amount must be greater than zero");
         require(address(depositShares) != address(0), "Pool not initialized");
         require(totalDeposits + amount <= depositCap, "Deposit cap exceeded");
-        require(
-            inputToken == address(stablecoin) || supportedTokens[inputToken],
-            "Unsupported deposit token"
-        );
 
         uint256 usdcAmount;
 
@@ -222,23 +191,13 @@ contract EqualFiLending is AccessControl, ReentrancyGuard {
             // Transfer stablecoins from the user to the contract
             stablecoin.transferFrom(_msgSender(), address(this), amount);
         } else {
-            // Swap the input token to USDC via Uniswap V3
-            IERC20 inputERC20 = IERC20(inputToken);
-            inputERC20.transferFrom(_msgSender(), address(this), amount);
-            inputERC20.approve(address(swapRouter), amount);
-
-            ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams({
-                tokenIn: inputToken,
-                tokenOut: address(stablecoin),
-                fee: 3000, // Pool fee set to 0.3%, adjust as needed
-                recipient: address(this),
-                deadline: deadline,
-                amountIn: amount,
-                amountOutMinimum: amountOutMinimum,
-                sqrtPriceLimitX96: 0
-            });
-
-            usdcAmount = swapRouter.exactInputSingle(params);
+            // Swap the input token to USDC via the TokenSwap contract
+            usdcAmount = tokenSwap.swapToUSDC(
+                inputToken,
+                amount,
+                amountOutMinimum,
+                deadline
+            );
             require(usdcAmount > 0, "Swap failed");
 
             emit TokensSwapped(_msgSender(), inputToken, amount, usdcAmount);
@@ -265,7 +224,7 @@ contract EqualFiLending is AccessControl, ReentrancyGuard {
         totalDeposits += usdcAmount;
         availableLiquidity += usdcAmount;
 
-        emit Deposited(_msgSender(), inputToken, amount, usdcAmount);
+        emit Deposited(_msgSender(), usdcAmount);
     }
 
     // ========================== Withdraw Function ==========================
@@ -326,6 +285,7 @@ contract EqualFiLending is AccessControl, ReentrancyGuard {
         require(address(depositShares) != address(0), "Pool not initialized");
         require(loans[msg.sender].amount == 0, "Already have an active loan");
         require(loanLength == 1 || loanLength == 2 || loanLength == 3 || loanLength == 4, "Loan Duration invalid");
+        uint256 initialGas = gasleft(); // Record the initial amount of gas at the start
 
         uint256 collateralAmount = (amount * COLLATERALIZATION_RATIO) / 100;
 
@@ -336,7 +296,6 @@ contract EqualFiLending is AccessControl, ReentrancyGuard {
         collateralToken.transferFrom(msg.sender, address(this), collateralAmount);
 
         // Calculate the gas fee dynamically and burn it
-        uint256 initialGas = gasleft(); // Record the initial amount of gas at the start
         uint256 gasFee = calculateGasFee(initialGas);
         token.burnFrom(_msgSender(), gasFee); // Collect gas fee
 
