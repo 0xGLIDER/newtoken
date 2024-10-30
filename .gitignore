@@ -30,3 +30,4 @@ src/loans6.sol
 script/
 src/hello.sol
 lib/
+.states/
