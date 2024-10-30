@@ -29,3 +29,4 @@ src/loans6.sol
 .deps/
 script/
 src/hello.sol
+lib/
