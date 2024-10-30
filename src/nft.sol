@@ -12,7 +12,7 @@ import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.s
  * @title iface
  * @dev Interface for ERC20 token interactions including balance checks, minting, and burning.
  */
-interface iface {
+interface IEqualFiToken {
     /**
      * @dev Returns the ERC20 token balance of a specific account.
      * @param account The address to query the balance of.
@@ -40,7 +40,7 @@ interface iface {
  * @dev This contract implements an ERC721 NFT with minting logic, token balance requirements, and interaction with the EqualFi token.
  *      It features a role-based access system for minting and admin tasks, reentrancy protection, and supply limits per NFT level.
  */
-contract equalfiNFT is ERC721URIStorage, AccessControl, ReentrancyGuard {
+contract EqualfiNFT is ERC721URIStorage, AccessControl, ReentrancyGuard {
     
     // ========================== State Variables ==========================
 
@@ -49,7 +49,7 @@ contract equalfiNFT is ERC721URIStorage, AccessControl, ReentrancyGuard {
     uint256 public totalSupply; // Total supply of minted NFTs
     uint256 public tokenBalanceRequired; // ERC20 token balance required to mint an NFT
     IERC20 public token; // ERC20 token contract used for balance checks
-    iface public Iface; // Interface for ERC20 token interaction (minting and burning)
+    IEqualFiToken public Iface; // Interface for ERC20 token interaction (minting and burning)
     string public currentTokenURI; // Base URI for all NFTs
     uint256 public txFee; // Transaction fee for transferring NFTs (in ERC20 tokens)
     uint256 public lvlOnePurchasePrice = 2.5e15; // Price in Wei for level 1 NFT
@@ -115,7 +115,7 @@ contract equalfiNFT is ERC721URIStorage, AccessControl, ReentrancyGuard {
         token = _tokenContract;
         tokenBalanceRequired = _setTokenBalanceRequired;
         txFee = 1.5e19; // Set initial transaction fee for transfers
-        Iface = iface(_ifaceAddress); // Set iface contract for ERC20 minting/burning
+        Iface = IEqualFiToken(_ifaceAddress); // Set iface contract for ERC20 minting/burning
 
         // Initialize supply caps and set current supplies to zero
         supplyInfo = SupplyInfo({
@@ -203,7 +203,7 @@ contract equalfiNFT is ERC721URIStorage, AccessControl, ReentrancyGuard {
      * @param _ifaceAddress The new iface contract address.
      */
     function setIfaceAddress(address _ifaceAddress) external onlyRole(_ADMIN) {
-        Iface = iface(_ifaceAddress);
+        Iface = IEqualFiToken(_ifaceAddress);
     }
 
     /**
