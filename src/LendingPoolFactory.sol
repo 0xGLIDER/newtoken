@@ -66,14 +66,6 @@ contract EqualFiLendingPoolFactory {
         // Deploy a new instance of the EqualFiLending contract
         EqualFiLending newPool = new EqualFiLending(stablecoin, collateralToken, token, lpFactory, tokenSwap);
 
-
-        /**IERC20 _stablecoin,
-        IERC20 _collateralToken,
-        TokenIface _token,
-        EqualFiLPFactory _factory,
-        ISwapRouter _swapRouter,
-        address _weth9**/
-
         // Grant the deployer admin roles to manage the lending pool settings
         newPool.grantRole(newPool.DEFAULT_ADMIN_ROLE(), msg.sender);
         newPool.grantRole(newPool.ADMIN_ROLE(), msg.sender);

@@ -452,12 +452,12 @@ contract EqualFiLending is AccessControl, ReentrancyGuard {
         // Add depositor fee to available liquidity
         availableLiquidity += amountToRepay + depositorFee;
 
-        // Return the collateral minus the fee to the borrower
-        uint256 collateralToReturn = loan.collateral - fee;
+        // Return the collateral minus the fee plus loan amount to the borrower
+        // This makes it so liquidation is not required as well as no iteraction
+        // from the user.  When the loan duration expires the user will have the
+        // Collateral minus the loan amount and fee.
+        uint256 collateralToReturn = loan.collateral - fee + loan.amount;
         collateralToken.transfer(borrower, collateralToReturn);
-
-        // Transfer the loan repayment amount from the admin to the contract
-        stablecoin.transferFrom(msg.sender, address(this), amountToRepay);
 
         // Update pool metrics
         totalLoans -= loan.amount;
