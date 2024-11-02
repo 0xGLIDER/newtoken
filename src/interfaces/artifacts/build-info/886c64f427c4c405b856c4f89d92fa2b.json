@@ -1,0 +1,374 @@
+{
+	"id": "886c64f427c4c405b856c4f89d92fa2b",
+	"_format": "hh-sol-build-info-1",
+	"solcVersion": "0.8.26",
+	"solcLongVersion": "0.8.26+commit.8a97fa7a",
+	"input": {
+		"language": "Solidity",
+		"sources": {
+			"src/interfaces/ITokenSwap.sol": {
+				"content": "// contracts/interfaces/ITokenSwap.sol\n// SPDX-License-Identifier: MIT\npragma solidity ^0.8.0;\n\n/**\n * @title ITokenSwap\n * @dev Interface for the TokenSwap contract.\n */\ninterface ITokenSwap {\n    /**\n     * @dev Swaps a specified amount of inputToken to USDC.\n     * @param inputToken The address of the token to swap from.\n     * @param amountIn The amount of inputToken to swap.\n     * @param amountOutMinimum The minimum amount of USDC to receive.\n     * @param deadline The timestamp after which the swap is invalid.\n     * @return amountOut The amount of USDC received from the swap.\n     */\n    function swapToUSDC(\n        address inputToken,\n        uint256 amountIn,\n        uint256 amountOutMinimum,\n        uint256 deadline\n    ) external returns (uint256 amountOut);\n}\n"
+			}
+		},
+		"settings": {
+			"optimizer": {
+				"enabled": false,
+				"runs": 200
+			},
+			"outputSelection": {
+				"*": {
+					"": [
+						"ast"
+					],
+					"*": [
+						"abi",
+						"metadata",
+						"devdoc",
+						"userdoc",
+						"storageLayout",
+						"evm.legacyAssembly",
+						"evm.bytecode",
+						"evm.deployedBytecode",
+						"evm.methodIdentifiers",
+						"evm.gasEstimates",
+						"evm.assembly"
+					]
+				}
+			},
+			"remappings": [
+				"@ensdomains/=lib/v4-core/node_modules/@ensdomains/",
+				"@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
+				"@uniswap/v3-core/=lib/v3-core/",
+				"@uniswap/v3-periphery/=lib/v3-periphery/",
+				"ds-test/=lib/forge-std/lib/ds-test/src/"
+			]
+		}
+	},
+	"output": {
+		"contracts": {
+			"src/interfaces/ITokenSwap.sol": {
+				"ITokenSwap": {
+					"abi": [
+						{
+							"inputs": [
+								{
+									"internalType": "address",
+									"name": "inputToken",
+									"type": "address"
+								},
+								{
+									"internalType": "uint256",
+									"name": "amountIn",
+									"type": "uint256"
+								},
+								{
+									"internalType": "uint256",
+									"name": "amountOutMinimum",
+									"type": "uint256"
+								},
+								{
+									"internalType": "uint256",
+									"name": "deadline",
+									"type": "uint256"
+								}
+							],
+							"name": "swapToUSDC",
+							"outputs": [
+								{
+									"internalType": "uint256",
+									"name": "amountOut",
+									"type": "uint256"
+								}
+							],
+							"stateMutability": "nonpayable",
+							"type": "function"
+						}
+					],
+					"devdoc": {
+						"details": "Interface for the TokenSwap contract.",
+						"kind": "dev",
+						"methods": {
+							"swapToUSDC(address,uint256,uint256,uint256)": {
+								"details": "Swaps a specified amount of inputToken to USDC.",
+								"params": {
+									"amountIn": "The amount of inputToken to swap.",
+									"amountOutMinimum": "The minimum amount of USDC to receive.",
+									"deadline": "The timestamp after which the swap is invalid.",
+									"inputToken": "The address of the token to swap from."
+								},
+								"returns": {
+									"amountOut": "The amount of USDC received from the swap."
+								}
+							}
+						},
+						"title": "ITokenSwap",
+						"version": 1
+					},
+					"evm": {
+						"assembly": "",
+						"bytecode": {
+							"functionDebugData": {},
+							"generatedSources": [],
+							"linkReferences": {},
+							"object": "",
+							"opcodes": "",
+							"sourceMap": ""
+						},
+						"deployedBytecode": {
+							"functionDebugData": {},
+							"generatedSources": [],
+							"immutableReferences": {},
+							"linkReferences": {},
+							"object": "",
+							"opcodes": "",
+							"sourceMap": ""
+						},
+						"gasEstimates": null,
+						"legacyAssembly": null,
+						"methodIdentifiers": {
+							"swapToUSDC(address,uint256,uint256,uint256)": "2197545c"
+						}
+					},
+					"metadata": "{\"compiler\":{\"version\":\"0.8.26+commit.8a97fa7a\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"inputToken\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amountIn\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amountOutMinimum\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"deadline\",\"type\":\"uint256\"}],\"name\":\"swapToUSDC\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"amountOut\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"details\":\"Interface for the TokenSwap contract.\",\"kind\":\"dev\",\"methods\":{\"swapToUSDC(address,uint256,uint256,uint256)\":{\"details\":\"Swaps a specified amount of inputToken to USDC.\",\"params\":{\"amountIn\":\"The amount of inputToken to swap.\",\"amountOutMinimum\":\"The minimum amount of USDC to receive.\",\"deadline\":\"The timestamp after which the swap is invalid.\",\"inputToken\":\"The address of the token to swap from.\"},\"returns\":{\"amountOut\":\"The amount of USDC received from the swap.\"}}},\"title\":\"ITokenSwap\",\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"src/interfaces/ITokenSwap.sol\":\"ITokenSwap\"},\"evmVersion\":\"cancun\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":false,\"runs\":200},\"remappings\":[\":@ensdomains/=lib/v4-core/node_modules/@ensdomains/\",\":@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/\",\":@uniswap/v3-core/=lib/v3-core/\",\":@uniswap/v3-periphery/=lib/v3-periphery/\",\":ds-test/=lib/forge-std/lib/ds-test/src/\"]},\"sources\":{\"src/interfaces/ITokenSwap.sol\":{\"keccak256\":\"0x8815c15c105c65d10563ca58f850f229fa2619eff68aa96f420b47251309110d\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://a24411f415f4b5bcfda2fa6a72e5f4f3a281d56f657604102263b4f92bec1597\",\"dweb:/ipfs/QmXy3W5DwmqH4FNq5RSELjYfivi8Xg7VvEYG5g5M8tPVLY\"]}},\"version\":1}",
+					"storageLayout": {
+						"storage": [],
+						"types": null
+					},
+					"userdoc": {
+						"kind": "user",
+						"methods": {},
+						"version": 1
+					}
+				}
+			}
+		},
+		"sources": {
+			"src/interfaces/ITokenSwap.sol": {
+				"ast": {
+					"absolutePath": "src/interfaces/ITokenSwap.sol",
+					"exportedSymbols": {
+						"ITokenSwap": [
+							17
+						]
+					},
+					"id": 18,
+					"license": "MIT",
+					"nodeType": "SourceUnit",
+					"nodes": [
+						{
+							"id": 1,
+							"literals": [
+								"solidity",
+								"^",
+								"0.8",
+								".0"
+							],
+							"nodeType": "PragmaDirective",
+							"src": "71:23:0"
+						},
+						{
+							"abstract": false,
+							"baseContracts": [],
+							"canonicalName": "ITokenSwap",
+							"contractDependencies": [],
+							"contractKind": "interface",
+							"documentation": {
+								"id": 2,
+								"nodeType": "StructuredDocumentation",
+								"src": "96:74:0",
+								"text": " @title ITokenSwap\n @dev Interface for the TokenSwap contract."
+							},
+							"fullyImplemented": false,
+							"id": 17,
+							"linearizedBaseContracts": [
+								17
+							],
+							"name": "ITokenSwap",
+							"nameLocation": "181:10:0",
+							"nodeType": "ContractDefinition",
+							"nodes": [
+								{
+									"documentation": {
+										"id": 3,
+										"nodeType": "StructuredDocumentation",
+										"src": "198:400:0",
+										"text": " @dev Swaps a specified amount of inputToken to USDC.\n @param inputToken The address of the token to swap from.\n @param amountIn The amount of inputToken to swap.\n @param amountOutMinimum The minimum amount of USDC to receive.\n @param deadline The timestamp after which the swap is invalid.\n @return amountOut The amount of USDC received from the swap."
+									},
+									"functionSelector": "2197545c",
+									"id": 16,
+									"implemented": false,
+									"kind": "function",
+									"modifiers": [],
+									"name": "swapToUSDC",
+									"nameLocation": "612:10:0",
+									"nodeType": "FunctionDefinition",
+									"parameters": {
+										"id": 12,
+										"nodeType": "ParameterList",
+										"parameters": [
+											{
+												"constant": false,
+												"id": 5,
+												"mutability": "mutable",
+												"name": "inputToken",
+												"nameLocation": "640:10:0",
+												"nodeType": "VariableDeclaration",
+												"scope": 16,
+												"src": "632:18:0",
+												"stateVariable": false,
+												"storageLocation": "default",
+												"typeDescriptions": {
+													"typeIdentifier": "t_address",
+													"typeString": "address"
+												},
+												"typeName": {
+													"id": 4,
+													"name": "address",
+													"nodeType": "ElementaryTypeName",
+													"src": "632:7:0",
+													"stateMutability": "nonpayable",
+													"typeDescriptions": {
+														"typeIdentifier": "t_address",
+														"typeString": "address"
+													}
+												},
+												"visibility": "internal"
+											},
+											{
+												"constant": false,
+												"id": 7,
+												"mutability": "mutable",
+												"name": "amountIn",
+												"nameLocation": "668:8:0",
+												"nodeType": "VariableDeclaration",
+												"scope": 16,
+												"src": "660:16:0",
+												"stateVariable": false,
+												"storageLocation": "default",
+												"typeDescriptions": {
+													"typeIdentifier": "t_uint256",
+													"typeString": "uint256"
+												},
+												"typeName": {
+													"id": 6,
+													"name": "uint256",
+													"nodeType": "ElementaryTypeName",
+													"src": "660:7:0",
+													"typeDescriptions": {
+														"typeIdentifier": "t_uint256",
+														"typeString": "uint256"
+													}
+												},
+												"visibility": "internal"
+											},
+											{
+												"constant": false,
+												"id": 9,
+												"mutability": "mutable",
+												"name": "amountOutMinimum",
+												"nameLocation": "694:16:0",
+												"nodeType": "VariableDeclaration",
+												"scope": 16,
+												"src": "686:24:0",
+												"stateVariable": false,
+												"storageLocation": "default",
+												"typeDescriptions": {
+													"typeIdentifier": "t_uint256",
+													"typeString": "uint256"
+												},
+												"typeName": {
+													"id": 8,
+													"name": "uint256",
+													"nodeType": "ElementaryTypeName",
+													"src": "686:7:0",
+													"typeDescriptions": {
+														"typeIdentifier": "t_uint256",
+														"typeString": "uint256"
+													}
+												},
+												"visibility": "internal"
+											},
+											{
+												"constant": false,
+												"id": 11,
+												"mutability": "mutable",
+												"name": "deadline",
+												"nameLocation": "728:8:0",
+												"nodeType": "VariableDeclaration",
+												"scope": 16,
+												"src": "720:16:0",
+												"stateVariable": false,
+												"storageLocation": "default",
+												"typeDescriptions": {
+													"typeIdentifier": "t_uint256",
+													"typeString": "uint256"
+												},
+												"typeName": {
+													"id": 10,
+													"name": "uint256",
+													"nodeType": "ElementaryTypeName",
+													"src": "720:7:0",
+													"typeDescriptions": {
+														"typeIdentifier": "t_uint256",
+														"typeString": "uint256"
+													}
+												},
+												"visibility": "internal"
+											}
+										],
+										"src": "622:120:0"
+									},
+									"returnParameters": {
+										"id": 15,
+										"nodeType": "ParameterList",
+										"parameters": [
+											{
+												"constant": false,
+												"id": 14,
+												"mutability": "mutable",
+												"name": "amountOut",
+												"nameLocation": "769:9:0",
+												"nodeType": "VariableDeclaration",
+												"scope": 16,
+												"src": "761:17:0",
+												"stateVariable": false,
+												"storageLocation": "default",
+												"typeDescriptions": {
+													"typeIdentifier": "t_uint256",
+													"typeString": "uint256"
+												},
+												"typeName": {
+													"id": 13,
+													"name": "uint256",
+													"nodeType": "ElementaryTypeName",
+													"src": "761:7:0",
+													"typeDescriptions": {
+														"typeIdentifier": "t_uint256",
+														"typeString": "uint256"
+													}
+												},
+												"visibility": "internal"
+											}
+										],
+										"src": "760:19:0"
+									},
+									"scope": 17,
+									"src": "603:177:0",
+									"stateMutability": "nonpayable",
+									"virtual": false,
+									"visibility": "external"
+								}
+							],
+							"scope": 18,
+							"src": "171:611:0",
+							"usedErrors": [],
+							"usedEvents": []
+						}
+					],
+					"src": "71:712:0"
+				},
+				"id": 0
+			}
+		}
+	}
+}

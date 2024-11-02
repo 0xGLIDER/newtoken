@@ -1,0 +1,385 @@
+{
+	"id": "9b15bbbc3033d7f991429f5ba3bb415b",
+	"_format": "hh-sol-build-info-1",
+	"solcVersion": "0.8.26",
+	"solcLongVersion": "0.8.26+commit.8a97fa7a",
+	"input": {
+		"language": "Solidity",
+		"sources": {
+			"src/interfaces/IEqualFiNFT.sol": {
+				"content": "// contracts/interfaces/IFlashLoanReceiver.sol\n// SPDX-License-Identifier: MIT\n\npragma solidity ^0.8.0;\ninterface IEqualFiNFT {\n    /**\n     * @dev Returns the URI of the specified NFT.\n     * @param tokenId The ID of the NFT.\n     * @return The URI string of the NFT.\n     */\n    function tokenURI(uint256 tokenId) external view returns (string memory);\n\n    /**\n     * @dev Returns the NFT ownership information of a user.\n     * @param user The address of the user.\n     * @return The NFT level of the user.\n     */\n    function nftOwnerInfo(address user) external view returns (uint256);\n}"
+			}
+		},
+		"settings": {
+			"optimizer": {
+				"enabled": false,
+				"runs": 200
+			},
+			"outputSelection": {
+				"*": {
+					"": [
+						"ast"
+					],
+					"*": [
+						"abi",
+						"metadata",
+						"devdoc",
+						"userdoc",
+						"storageLayout",
+						"evm.legacyAssembly",
+						"evm.bytecode",
+						"evm.deployedBytecode",
+						"evm.methodIdentifiers",
+						"evm.gasEstimates",
+						"evm.assembly"
+					]
+				}
+			},
+			"remappings": [
+				"@ensdomains/=lib/v4-core/node_modules/@ensdomains/",
+				"@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
+				"@uniswap/v3-core/=lib/v3-core/",
+				"@uniswap/v3-periphery/=lib/v3-periphery/",
+				"ds-test/=lib/forge-std/lib/ds-test/src/"
+			]
+		}
+	},
+	"output": {
+		"contracts": {
+			"src/interfaces/IEqualFiNFT.sol": {
+				"IEqualFiNFT": {
+					"abi": [
+						{
+							"inputs": [
+								{
+									"internalType": "address",
+									"name": "user",
+									"type": "address"
+								}
+							],
+							"name": "nftOwnerInfo",
+							"outputs": [
+								{
+									"internalType": "uint256",
+									"name": "",
+									"type": "uint256"
+								}
+							],
+							"stateMutability": "view",
+							"type": "function"
+						},
+						{
+							"inputs": [
+								{
+									"internalType": "uint256",
+									"name": "tokenId",
+									"type": "uint256"
+								}
+							],
+							"name": "tokenURI",
+							"outputs": [
+								{
+									"internalType": "string",
+									"name": "",
+									"type": "string"
+								}
+							],
+							"stateMutability": "view",
+							"type": "function"
+						}
+					],
+					"devdoc": {
+						"kind": "dev",
+						"methods": {
+							"nftOwnerInfo(address)": {
+								"details": "Returns the NFT ownership information of a user.",
+								"params": {
+									"user": "The address of the user."
+								},
+								"returns": {
+									"_0": "The NFT level of the user."
+								}
+							},
+							"tokenURI(uint256)": {
+								"details": "Returns the URI of the specified NFT.",
+								"params": {
+									"tokenId": "The ID of the NFT."
+								},
+								"returns": {
+									"_0": "The URI string of the NFT."
+								}
+							}
+						},
+						"version": 1
+					},
+					"evm": {
+						"assembly": "",
+						"bytecode": {
+							"functionDebugData": {},
+							"generatedSources": [],
+							"linkReferences": {},
+							"object": "",
+							"opcodes": "",
+							"sourceMap": ""
+						},
+						"deployedBytecode": {
+							"functionDebugData": {},
+							"generatedSources": [],
+							"immutableReferences": {},
+							"linkReferences": {},
+							"object": "",
+							"opcodes": "",
+							"sourceMap": ""
+						},
+						"gasEstimates": null,
+						"legacyAssembly": null,
+						"methodIdentifiers": {
+							"nftOwnerInfo(address)": "1ab0d49e",
+							"tokenURI(uint256)": "c87b56dd"
+						}
+					},
+					"metadata": "{\"compiler\":{\"version\":\"0.8.26+commit.8a97fa7a\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"user\",\"type\":\"address\"}],\"name\":\"nftOwnerInfo\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"tokenURI\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{\"nftOwnerInfo(address)\":{\"details\":\"Returns the NFT ownership information of a user.\",\"params\":{\"user\":\"The address of the user.\"},\"returns\":{\"_0\":\"The NFT level of the user.\"}},\"tokenURI(uint256)\":{\"details\":\"Returns the URI of the specified NFT.\",\"params\":{\"tokenId\":\"The ID of the NFT.\"},\"returns\":{\"_0\":\"The URI string of the NFT.\"}}},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"src/interfaces/IEqualFiNFT.sol\":\"IEqualFiNFT\"},\"evmVersion\":\"cancun\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":false,\"runs\":200},\"remappings\":[\":@ensdomains/=lib/v4-core/node_modules/@ensdomains/\",\":@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/\",\":@uniswap/v3-core/=lib/v3-core/\",\":@uniswap/v3-periphery/=lib/v3-periphery/\",\":ds-test/=lib/forge-std/lib/ds-test/src/\"]},\"sources\":{\"src/interfaces/IEqualFiNFT.sol\":{\"keccak256\":\"0xf62a04991c7bfbdcedc8a9be1c81d9eada0998a0963660fd9403ead90f6e42a5\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://cbb23f66aa52a85a0bf3a518218c39a9d8b6e9df882ba29dba4acef2463fe35a\",\"dweb:/ipfs/QmRiWi9AC4us4NiCZZVtCWwWUwHD7pN7zD53qs6ceDaVSM\"]}},\"version\":1}",
+					"storageLayout": {
+						"storage": [],
+						"types": null
+					},
+					"userdoc": {
+						"kind": "user",
+						"methods": {},
+						"version": 1
+					}
+				}
+			}
+		},
+		"sources": {
+			"src/interfaces/IEqualFiNFT.sol": {
+				"ast": {
+					"absolutePath": "src/interfaces/IEqualFiNFT.sol",
+					"exportedSymbols": {
+						"IEqualFiNFT": [
+							18
+						]
+					},
+					"id": 19,
+					"license": "MIT",
+					"nodeType": "SourceUnit",
+					"nodes": [
+						{
+							"id": 1,
+							"literals": [
+								"solidity",
+								"^",
+								"0.8",
+								".0"
+							],
+							"nodeType": "PragmaDirective",
+							"src": "80:23:0"
+						},
+						{
+							"abstract": false,
+							"baseContracts": [],
+							"canonicalName": "IEqualFiNFT",
+							"contractDependencies": [],
+							"contractKind": "interface",
+							"fullyImplemented": false,
+							"id": 18,
+							"linearizedBaseContracts": [
+								18
+							],
+							"name": "IEqualFiNFT",
+							"nameLocation": "114:11:0",
+							"nodeType": "ContractDefinition",
+							"nodes": [
+								{
+									"documentation": {
+										"id": 2,
+										"nodeType": "StructuredDocumentation",
+										"src": "132:144:0",
+										"text": " @dev Returns the URI of the specified NFT.\n @param tokenId The ID of the NFT.\n @return The URI string of the NFT."
+									},
+									"functionSelector": "c87b56dd",
+									"id": 9,
+									"implemented": false,
+									"kind": "function",
+									"modifiers": [],
+									"name": "tokenURI",
+									"nameLocation": "290:8:0",
+									"nodeType": "FunctionDefinition",
+									"parameters": {
+										"id": 5,
+										"nodeType": "ParameterList",
+										"parameters": [
+											{
+												"constant": false,
+												"id": 4,
+												"mutability": "mutable",
+												"name": "tokenId",
+												"nameLocation": "307:7:0",
+												"nodeType": "VariableDeclaration",
+												"scope": 9,
+												"src": "299:15:0",
+												"stateVariable": false,
+												"storageLocation": "default",
+												"typeDescriptions": {
+													"typeIdentifier": "t_uint256",
+													"typeString": "uint256"
+												},
+												"typeName": {
+													"id": 3,
+													"name": "uint256",
+													"nodeType": "ElementaryTypeName",
+													"src": "299:7:0",
+													"typeDescriptions": {
+														"typeIdentifier": "t_uint256",
+														"typeString": "uint256"
+													}
+												},
+												"visibility": "internal"
+											}
+										],
+										"src": "298:17:0"
+									},
+									"returnParameters": {
+										"id": 8,
+										"nodeType": "ParameterList",
+										"parameters": [
+											{
+												"constant": false,
+												"id": 7,
+												"mutability": "mutable",
+												"name": "",
+												"nameLocation": "-1:-1:-1",
+												"nodeType": "VariableDeclaration",
+												"scope": 9,
+												"src": "339:13:0",
+												"stateVariable": false,
+												"storageLocation": "memory",
+												"typeDescriptions": {
+													"typeIdentifier": "t_string_memory_ptr",
+													"typeString": "string"
+												},
+												"typeName": {
+													"id": 6,
+													"name": "string",
+													"nodeType": "ElementaryTypeName",
+													"src": "339:6:0",
+													"typeDescriptions": {
+														"typeIdentifier": "t_string_storage_ptr",
+														"typeString": "string"
+													}
+												},
+												"visibility": "internal"
+											}
+										],
+										"src": "338:15:0"
+									},
+									"scope": 18,
+									"src": "281:73:0",
+									"stateMutability": "view",
+									"virtual": false,
+									"visibility": "external"
+								},
+								{
+									"documentation": {
+										"id": 10,
+										"nodeType": "StructuredDocumentation",
+										"src": "360:158:0",
+										"text": " @dev Returns the NFT ownership information of a user.\n @param user The address of the user.\n @return The NFT level of the user."
+									},
+									"functionSelector": "1ab0d49e",
+									"id": 17,
+									"implemented": false,
+									"kind": "function",
+									"modifiers": [],
+									"name": "nftOwnerInfo",
+									"nameLocation": "532:12:0",
+									"nodeType": "FunctionDefinition",
+									"parameters": {
+										"id": 13,
+										"nodeType": "ParameterList",
+										"parameters": [
+											{
+												"constant": false,
+												"id": 12,
+												"mutability": "mutable",
+												"name": "user",
+												"nameLocation": "553:4:0",
+												"nodeType": "VariableDeclaration",
+												"scope": 17,
+												"src": "545:12:0",
+												"stateVariable": false,
+												"storageLocation": "default",
+												"typeDescriptions": {
+													"typeIdentifier": "t_address",
+													"typeString": "address"
+												},
+												"typeName": {
+													"id": 11,
+													"name": "address",
+													"nodeType": "ElementaryTypeName",
+													"src": "545:7:0",
+													"stateMutability": "nonpayable",
+													"typeDescriptions": {
+														"typeIdentifier": "t_address",
+														"typeString": "address"
+													}
+												},
+												"visibility": "internal"
+											}
+										],
+										"src": "544:14:0"
+									},
+									"returnParameters": {
+										"id": 16,
+										"nodeType": "ParameterList",
+										"parameters": [
+											{
+												"constant": false,
+												"id": 15,
+												"mutability": "mutable",
+												"name": "",
+												"nameLocation": "-1:-1:-1",
+												"nodeType": "VariableDeclaration",
+												"scope": 17,
+												"src": "582:7:0",
+												"stateVariable": false,
+												"storageLocation": "default",
+												"typeDescriptions": {
+													"typeIdentifier": "t_uint256",
+													"typeString": "uint256"
+												},
+												"typeName": {
+													"id": 14,
+													"name": "uint256",
+													"nodeType": "ElementaryTypeName",
+													"src": "582:7:0",
+													"typeDescriptions": {
+														"typeIdentifier": "t_uint256",
+														"typeString": "uint256"
+													}
+												},
+												"visibility": "internal"
+											}
+										],
+										"src": "581:9:0"
+									},
+									"scope": 18,
+									"src": "523:68:0",
+									"stateMutability": "view",
+									"virtual": false,
+									"visibility": "external"
+								}
+							],
+							"scope": 19,
+							"src": "104:489:0",
+							"usedErrors": [],
+							"usedEvents": []
+						}
+					],
+					"src": "80:513:0"
+				},
+				"id": 0
+			}
+		}
+	}
+}

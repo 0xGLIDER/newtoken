@@ -5,36 +5,13 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "./interfaces/ITokenSwap.sol";
+import "./interfaces/ITokenIface.sol";
+import "./interfaces/IFlashLoanReceiver.sol";
 
 // Import Custom Contracts
 import "./LPToken.sol";          // Custom ERC20 LP Token with Mint/Burn functionality
 import "./ERC20Factory.sol";     // Factory to create ERC20 tokens
-
-// Import TokenSwap Interface
-interface ITokenSwap {
-    function swapToUSDC(
-        address inputToken,
-        uint256 amountIn,
-        uint256 amountOutMinimum,
-        uint256 deadline
-    ) external returns (uint256 amountOut);
-}
-
-/**
- * @title TokenIface
- * @dev Interface extending IERC20 with a burnFrom function.
- */
-interface TokenIface is IERC20 {
-    function burnFrom(address user, uint256 amount) external;
-}
-
-/**
- * @title IFlashLoanReceiver
- * @dev Interface that flash loan receivers must implement.
- */
-interface IFlashLoanReceiver {
-    function executeOperation(uint256 amount, uint256 fee, bytes calldata params) external;
-}
 
 /**
  * @title EqualFiLending

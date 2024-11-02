@@ -1,0 +1,109 @@
+{
+	"compiler": {
+		"version": "0.8.26+commit.8a97fa7a"
+	},
+	"language": "Solidity",
+	"output": {
+		"abi": [
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "user",
+						"type": "address"
+					}
+				],
+				"name": "nftOwnerInfo",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "tokenId",
+						"type": "uint256"
+					}
+				],
+				"name": "tokenURI",
+				"outputs": [
+					{
+						"internalType": "string",
+						"name": "",
+						"type": "string"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			}
+		],
+		"devdoc": {
+			"kind": "dev",
+			"methods": {
+				"nftOwnerInfo(address)": {
+					"details": "Returns the NFT ownership information of a user.",
+					"params": {
+						"user": "The address of the user."
+					},
+					"returns": {
+						"_0": "The NFT level of the user."
+					}
+				},
+				"tokenURI(uint256)": {
+					"details": "Returns the URI of the specified NFT.",
+					"params": {
+						"tokenId": "The ID of the NFT."
+					},
+					"returns": {
+						"_0": "The URI string of the NFT."
+					}
+				}
+			},
+			"version": 1
+		},
+		"userdoc": {
+			"kind": "user",
+			"methods": {},
+			"version": 1
+		}
+	},
+	"settings": {
+		"compilationTarget": {
+			"src/interfaces/IEqualFiNFT.sol": "IEqualFiNFT"
+		},
+		"evmVersion": "cancun",
+		"libraries": {},
+		"metadata": {
+			"bytecodeHash": "ipfs"
+		},
+		"optimizer": {
+			"enabled": false,
+			"runs": 200
+		},
+		"remappings": [
+			":@ensdomains/=lib/v4-core/node_modules/@ensdomains/",
+			":@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
+			":@uniswap/v3-core/=lib/v3-core/",
+			":@uniswap/v3-periphery/=lib/v3-periphery/",
+			":ds-test/=lib/forge-std/lib/ds-test/src/"
+		]
+	},
+	"sources": {
+		"src/interfaces/IEqualFiNFT.sol": {
+			"keccak256": "0xf62a04991c7bfbdcedc8a9be1c81d9eada0998a0963660fd9403ead90f6e42a5",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://cbb23f66aa52a85a0bf3a518218c39a9d8b6e9df882ba29dba4acef2463fe35a",
+				"dweb:/ipfs/QmRiWi9AC4us4NiCZZVtCWwWUwHD7pN7zD53qs6ceDaVSM"
+			]
+		}
+	},
+	"version": 1
+}

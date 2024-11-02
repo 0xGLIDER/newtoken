@@ -5,39 +5,9 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import { AccessControl } from "@openzeppelin/contracts/access/AccessControl.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "./interfaces/IEqualFiToken.sol";
+import "./interfaces/IEqualFiNFT.sol";
 
-/**
- * @title nftIface
- * @dev Interface for interacting with the NFT contract to retrieve token URIs and ownership information.
- */
-interface IEqualFiNFT {
-    /**
-     * @dev Returns the URI of the specified NFT.
-     * @param tokenId The ID of the NFT.
-     * @return The URI string of the NFT.
-     */
-    function tokenURI(uint256 tokenId) external view returns (string memory);
-
-    /**
-     * @dev Returns the NFT ownership information of a user.
-     * @param user The address of the user.
-     * @return The NFT level of the user.
-     */
-    function nftOwnerInfo(address user) external view returns (uint256);
-}
-
-/**
- * @title equalfiToken
- * @dev Interface extending the IERC20 interface with a minting function.
- */
-interface EqualfiToken is IERC20 {
-    /**
-     * @dev Mints a specified amount of tokens to a recipient.
-     * @param recipient The address to receive the minted tokens.
-     * @param amount The number of tokens to mint.
-     */
-    function mintTo(address recipient, uint256 amount) external;
-}
 
 /**
  * @title equalfiStaking
@@ -49,7 +19,7 @@ contract equalfiStaking is AccessControl, ReentrancyGuard {
 
     // ========================== State Variables ==========================
 
-    EqualfiToken public token; // ERC20 token contract used for staking, with minting capabilities
+    IEqualFiToken public token; // ERC20 token contract used for staking, with minting capabilities
     IERC721 public nft; // ERC721 NFT contract for determining staking bonuses
     IEqualFiNFT public ifacenft; // Interface for retrieving NFT owner and metadata information
     uint256 public rewardRatePerBlock; // Reward rate for each block the user stakes tokens
@@ -117,7 +87,7 @@ contract equalfiStaking is AccessControl, ReentrancyGuard {
      * @param _nft The address of the ERC721 NFT contract.
      * @param _IEqualFiNFT The address of the NFT interface for retrieving NFT details.
      */
-    constructor(EqualfiToken _token, uint _claimInterval, IERC721 _nft, IEqualFiNFT _IEqualFiNFT) {
+    constructor(IEqualFiToken _token, uint _claimInterval, IERC721 _nft, IEqualFiNFT _IEqualFiNFT) {
         token = _token;
         nft = _nft;
         ifacenft = _IEqualFiNFT;
@@ -298,7 +268,7 @@ contract equalfiStaking is AccessControl, ReentrancyGuard {
      *      Only callable by an account with the _ADMIN role.
      * @param _newToken The address of the new mintable ERC20 token contract.
      */
-    function setToken(EqualfiToken _newToken) external onlyRole(_ADMIN){
+    function setToken(IEqualFiToken _newToken) external onlyRole(_ADMIN){
         token = _newToken;
     }
 
