@@ -5,8 +5,8 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import { AccessControl } from "@openzeppelin/contracts/access/AccessControl.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import "./interfaces/IEqualFiToken.sol";
-import "./interfaces/IEqualFiNFT.sol";
+import { IEqualFiToken } from "./interfaces/IEqualFiToken.sol";
+import { IEqualFiNFT } from "./interfaces/IEqualFiNFT.sol";
 
 
 /**

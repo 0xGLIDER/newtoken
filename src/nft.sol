@@ -7,7 +7,7 @@ import { AccessControl } from "@openzeppelin/contracts/access/AccessControl.sol"
 import { ERC721URIStorage } from "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import { hextool } from "./hex.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import "./interfaces/IEqualFiToken.sol";
+import { IEqualFiToken } from "./interfaces/IEqualFiToken.sol";
 
 /**
  * @title EqualFiNFT
