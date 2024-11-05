@@ -91,8 +91,16 @@ contract SuperTokenFactory {
 
         //erc20Factory.grantRole(erc20Factory.DEFAULT_ADMIN_ROLE(), address(this));
 
+        
+
         // Create a clone of the SuperToken2 implementation
         superToken = superTokenImplementation.clone();
+
+        // Create a new LPToken using the ERC20Factory
+        string memory lpTokenName = string(abi.encodePacked(name, " LP Token"));
+        string memory lpTokenSymbol = string(abi.encodePacked(symbol, "-LP"));
+        lpToken = address(erc20Factory.createLPToken(lpTokenName, lpTokenSymbol, superToken));
+        require(lpToken != address(0), "SuperTokenFactory: LPToken creation failed");
 
         // Initialize the clone with the provided parameters
         SuperToken3(payable(superToken)).initialize(
@@ -104,11 +112,6 @@ contract SuperTokenFactory {
             lpToken
         );
 
-        // Create a new LPToken using the ERC20Factory
-        string memory lpTokenName = string(abi.encodePacked(name, " LP Token"));
-        string memory lpTokenSymbol = string(abi.encodePacked(symbol, "-LP"));
-        lpToken = address(erc20Factory.createLPToken(lpTokenName, lpTokenSymbol, superToken));
-        require(lpToken != address(0), "SuperTokenFactory: LPToken creation failed");
 
         // Grant MINTER_ROLE and BURNER_ROLE to SuperToken2 in the LPToken contract
         //LPToken(lpToken).grantRole(LPToken(lpToken).MINTER_ROLE(), msg.sender);
