@@ -185,13 +185,10 @@ contract SuperToken3 is Initializable, ReentrancyGuardUpgradeable, AccessControl
 
     // ========================== Redeem Function ==========================
 
-    /**
-     * @dev Allows users to redeem their SuperTokens for underlying tokens.
-     * @param superAmount The amount of SuperTokens to redeem.
-     */
     function redeem(uint256 superAmount) external nonReentrant {
         require(superAmount > 0, "SuperToken2: zero redeem amount");
-        require(lpToken.balanceOf(msg.sender) >= superAmount, "SuperToken2: insufficient LP token balance");
+        uint256 initialHolderBal = lpToken.balanceOf(msg.sender);
+        require(initialHolderBal >= superAmount, "SuperToken2: insufficient LP token balance");
 
         uint256 supply = lpToken.totalSupply();
         uint256 share = (superAmount * 1e18) / supply;
@@ -200,29 +197,43 @@ contract SuperToken3 is Initializable, ReentrancyGuardUpgradeable, AccessControl
         lpToken.burnFrom(msg.sender, superAmount);
 
         uint256[] memory amountsToReturn = new uint256[](underlyingTokens.length);
+
         for (uint256 i = 0; i < underlyingTokens.length; i++) {
             IERC20Metadata tokenContract = underlyingTokens[i];
-            uint256 poolDeposit = liquidityPools[address(tokenContract)].totalDeposits;
-            uint256 amt = (poolDeposit * share) / 1e18;
-            require(amt <= liquidityPools[address(tokenContract)].totalDeposits, "SuperToken2: insufficient pool deposit");
+            address tokenAddr = address(tokenContract);
+            LiquidityPool storage pool = liquidityPools[tokenAddr];
 
-            liquidityPools[address(tokenContract)].totalDeposits -= amt;
-            tokenContract.safeTransfer(msg.sender, amt);
-            amountsToReturn[i] = amt;
+            // Calculate available deposits
+            uint256 availableDeposits = pool.totalDeposits - pool.totalBorrowed;
+
+            // Calculate deposit amount to return
+            uint256 depositAmt = (availableDeposits * share) / 1e18;
+            require(depositAmt <= availableDeposits, "SuperToken2: insufficient available deposits");
+            pool.totalDeposits -= depositAmt;
+
+            // Calculate fee amount to return
+            uint256 feeAmt = (pool.holderFees * share) / 1e18;
+            if (feeAmt > 0) {
+                pool.holderFees -= feeAmt;
+                emit FeesClaimed(msg.sender, tokenAddr, feeAmt);
+            }
+
+            // Transfer combined amount
+            uint256 totalAmt = depositAmt + feeAmt;
+            require(tokenContract.balanceOf(address(this)) >= totalAmt, "SuperToken2: insufficient contract balance");
+            tokenContract.safeTransfer(msg.sender, totalAmt);
+
+            amountsToReturn[i] = totalAmt;
         }
 
         emit Redeem(msg.sender, superAmount, amountsToReturn);
     }
 
+
+
+
     // ========================== Borrow Function ==========================
 
-    /**
-     * @dev Allows users to borrow a specific underlying token by providing SuperToken collateral.
-     *      Users can only have one active loan at a time.
-     * @param tokenAddress The address of the underlying token to borrow.
-     * @param amount The amount of the underlying token to borrow.
-     * @param loanType The type of loan (duration and APY).
-     */
     function borrow(address tokenAddress, uint256 amount, LoanType loanType) external nonReentrant {
         require(amount > 0, "SuperToken2: zero borrow amount");
         require(loans[msg.sender].amount == 0, "SuperToken2: active loan exists");
@@ -234,12 +245,7 @@ contract SuperToken3 is Initializable, ReentrancyGuardUpgradeable, AccessControl
         uint256 collateral = (amount * COLLATERALIZATION_RATIO) / 100;
         pool.token.safeTransferFrom(msg.sender, address(this), collateral);
 
-        uint256 fee = calculateFee(amount, loanType);
         pool.totalBorrowed += amount;
-        pool.totalFees += fee;
-
-        // Split fees using the FeeDistributor library
-        pool.distributeFees(fee);
 
         loans[msg.sender] = Loan({
             amount: amount,
@@ -254,6 +260,7 @@ contract SuperToken3 is Initializable, ReentrancyGuardUpgradeable, AccessControl
         emit Borrowed(msg.sender, tokenAddress, amount, collateral);
     }
 
+
     // ========================== Repay Function ==========================
 
     /**
@@ -267,20 +274,25 @@ contract SuperToken3 is Initializable, ReentrancyGuardUpgradeable, AccessControl
         require(address(pool.token) != address(0), "SuperToken2: invalid token");
 
         uint256 fee = calculateFee(loan.amount, loan.loanType);
-        pool.token.safeTransferFrom(msg.sender, address(this), loan.amount);
+
+        // Borrower repays the loan amount plus fee
+        uint256 repaymentAmount = loan.amount + fee;
+        pool.token.safeTransferFrom(msg.sender, address(this), repaymentAmount);
+
         pool.totalBorrowed -= loan.amount;
         pool.totalFees += fee;
 
-        // Split fees using the FeeDistributor library
+        // Distribute the collected fee
         pool.distributeFees(fee);
 
-        uint256 collateralReturn = loan.collateral - fee;
-        pool.token.safeTransfer(msg.sender, collateralReturn);
+        // Return collateral
+        pool.token.safeTransfer(msg.sender, loan.collateral);
 
         delete loans[msg.sender];
 
-        emit Repaid(msg.sender, loan.tokenAddress, loan.amount, collateralReturn, fee);
+        emit Repaid(msg.sender, loan.tokenAddress, loan.amount, loan.collateral, fee);
     }
+
 
     // ========================== Force Repayment Function ==========================
 
@@ -304,10 +316,11 @@ contract SuperToken3 is Initializable, ReentrancyGuardUpgradeable, AccessControl
         uint256 fee = calculateFee(loan.amount, loanType);
         require(fee <= loan.collateral, "SuperToken2: fee exceeds collateral");
 
-        // Split fees using the FeeDistributor library
-        pool.distributeFees(fee);
-
         pool.totalBorrowed -= loan.amount;
+        pool.totalFees += fee;
+
+        // Distribute the collected fee
+        pool.distributeFees(fee);
 
         uint256 collateralReturn = loan.collateral - fee;
         pool.token.safeTransfer(borrower, collateralReturn);
@@ -316,6 +329,7 @@ contract SuperToken3 is Initializable, ReentrancyGuardUpgradeable, AccessControl
 
         emit ForcedRepayment(borrower, loan.tokenAddress, loan.amount, collateralReturn);
     }
+
 
     // ========================== Flash Loan Function ==========================
 
@@ -339,7 +353,7 @@ contract SuperToken3 is Initializable, ReentrancyGuardUpgradeable, AccessControl
         require(pool.totalDeposits - pool.totalBorrowed >= amount, "SuperToken2: insufficient liquidity");
 
         uint256 fee = (amount * FLASHLOAN_FEE_BPS) / BASIS_POINTS_DIVISOR;
-        uint256 repayment = amount + fee;
+        uint256 repaymentAmount = amount + fee;
 
         uint256 balanceBefore = pool.token.balanceOf(address(this));
 
@@ -350,39 +364,11 @@ contract SuperToken3 is Initializable, ReentrancyGuardUpgradeable, AccessControl
         uint256 balanceAfter = pool.token.balanceOf(address(this));
         require(balanceAfter >= balanceBefore + fee, "SuperToken2: flash loan not repaid");
 
-        pool.totalBorrowed += amount;
+        // Now that the fee has been repaid, account for it
         pool.totalFees += fee;
-
-        // Split fees using the FeeDistributor library
         pool.distributeFees(fee);
 
         emit FlashLoan(receiver, tokenAddress, amount, fee);
-    }
-
-    // ========================== Claim Fees Function ==========================
-
-    /**
-     * @dev Allows SuperToken holders to claim their share of accumulated fees for a specific underlying token.
-     * @param tokenAddress The address of the underlying token for which to claim fees.
-     */
-    function claimFees(address tokenAddress) external nonReentrant {
-        LiquidityPool storage pool = liquidityPools[tokenAddress];
-        require(address(pool.token) != address(0), "SuperToken2: invalid token");
-        require(pool.totalFees > 0, "SuperToken2: no fees to claim");
-
-        uint256 holderBal = lpToken.balanceOf(msg.sender);
-        require(holderBal > 0, "SuperToken2: no LP tokens held");
-
-        uint256 supply = lpToken.totalSupply();
-        uint256 share = (holderBal * 1e18) / supply;
-        uint256 feeAmt = (pool.totalFees * share) / 1e18;
-
-        require(feeAmt > 0, "SuperToken2: no fees to claim");
-
-        pool.totalFees -= feeAmt;
-        pool.token.safeTransfer(msg.sender, feeAmt);
-
-        emit FeesClaimed(msg.sender, tokenAddress, feeAmt);
     }
 
     // ========================== Admin Functions ==========================
