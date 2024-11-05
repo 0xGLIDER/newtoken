@@ -266,7 +266,7 @@ contract SuperToken3 is Initializable, ReentrancyGuardUpgradeable, AccessControl
     /**
      * @dev Allows borrowers to repay their loans and reclaim their collateral.
      */
-    function repay() external nonReentrant {
+    /**unction repay() external nonReentrant {
         Loan storage loan = loans[msg.sender];
         require(loan.amount > 0, "SuperToken2: no active loan");
 
@@ -291,7 +291,39 @@ contract SuperToken3 is Initializable, ReentrancyGuardUpgradeable, AccessControl
         delete loans[msg.sender];
 
         emit Repaid(msg.sender, loan.tokenAddress, loan.amount, loan.collateral, fee);
+    }**/
+
+    function repay() external nonReentrant {
+        Loan storage loan = loans[msg.sender];
+        require(loan.amount > 0, "No active loan");
+
+        LiquidityPool storage pool = liquidityPools[loan.tokenAddress];
+        require(address(pool.token) != address(0), "Invalid token");
+
+        uint256 fee = calculateFee(loan.amount, loan.loanType);
+        uint256 totalDue = loan.amount + fee;
+        require(loan.collateral >= totalDue, "Insufficient collateral to cover loan and fee");
+
+        // Deduct loan amount and fee from collateral
+        uint256 netCollateralReturn = loan.collateral - totalDue;
+
+        // Update state variables
+        pool.totalBorrowed -= loan.amount;
+        pool.totalFees += fee;
+        pool.distributeFees(fee);
+
+       
+        // Return net collateral to borrower
+        if (netCollateralReturn > 0) {
+            pool.token.safeTransfer(msg.sender, netCollateralReturn);
+        }
+
+        // Delete loan record
+        delete loans[msg.sender];
+
+        emit Repaid(msg.sender, loan.tokenAddress, loan.amount, netCollateralReturn, fee);
     }
+
 
 
     // ========================== Force Repayment Function ==========================
