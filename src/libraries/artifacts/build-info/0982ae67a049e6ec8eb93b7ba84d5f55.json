@@ -1,13 +1,16 @@
 {
-	"id": "f09d482cf72fdc8a8fb5668c6c86df9a",
+	"id": "0982ae67a049e6ec8eb93b7ba84d5f55",
 	"_format": "hh-sol-build-info-1",
 	"solcVersion": "0.8.26",
 	"solcLongVersion": "0.8.26+commit.8a97fa7a",
 	"input": {
 		"language": "Solidity",
 		"sources": {
-			"src/interfaces/ITokenIface.sol": {
-				"content": "// contracts/interfaces/ITokenIface.sol\n// SPDX-License-Identifier: MIT\npragma solidity ^0.8.0;\n\nimport \"@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol\";\n\n/**\n * @title TokenIface\n * @dev Interface extending IERC20Metadata with a burnFrom function.\n */\ninterface TokenIface is IERC20Metadata {\n    /**\n     * @dev Burns a specific amount of tokens from a user.\n     * @param user The address from which tokens will be burned.\n     * @param amount The amount of tokens to burn.\n     */\n    function burnFrom(address user, uint256 amount) external;\n}\n"
+			"src/libraries/FeeDistributor.sol": {
+				"content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.0;\n\nimport \"../LiquidityPool.sol\";\n\n/**\n * @title FeeDistributor\n * @dev Library for distributing fees between admins and holders.\n */\nlibrary FeeDistributor {\n    uint256 public constant BASIS_POINTS_DIVISOR = 10000;\n\n    /**\n     * @dev Distributes fees between admin and holders.\n     * @param pool The liquidity pool.\n     * @param fee The total fee to distribute.\n     */\n    function distributeFees(LiquidityPool storage pool, uint256 fee) internal {\n        uint256 adminFee = (fee * 5) / BASIS_POINTS_DIVISOR; // 0.05%\n        uint256 holderFee = fee - adminFee;\n\n        pool.adminFees += adminFee;\n        pool.holderFees += holderFee;\n    }\n}\n"
+			},
+			"src/LiquidityPool.sol": {
+				"content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.0;\n\nimport \"@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol\";\n\n/**\n * @title LiquidityPool\n * @dev Defines the structure of a liquidity pool.\n */\nstruct LiquidityPool {\n    IERC20Metadata token;\n    uint256 totalDeposits;\n    uint256 totalBorrowed;\n    uint256 totalFees;\n    uint256 adminFees;\n    uint256 holderFees;\n}\n"
 			},
 			"lib/openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol": {
 				"content": "// SPDX-License-Identifier: MIT\n// OpenZeppelin Contracts (last updated v5.1.0) (token/ERC20/extensions/IERC20Metadata.sol)\n\npragma solidity ^0.8.20;\n\nimport {IERC20} from \"../IERC20.sol\";\n\n/**\n * @dev Interface for the optional metadata functions from the ERC-20 standard.\n */\ninterface IERC20Metadata is IERC20 {\n    /**\n     * @dev Returns the name of the token.\n     */\n    function name() external view returns (string memory);\n\n    /**\n     * @dev Returns the symbol of the token.\n     */\n    function symbol() external view returns (string memory);\n\n    /**\n     * @dev Returns the decimals places of the token.\n     */\n    function decimals() external view returns (uint8);\n}\n"
@@ -18,7 +21,7 @@
 		},
 		"settings": {
 			"optimizer": {
-				"enabled": false,
+				"enabled": true,
 				"runs": 200
 			},
 			"outputSelection": {
@@ -302,7 +305,7 @@
 							"transferFrom(address,address,uint256)": "23b872dd"
 						}
 					},
-					"metadata": "{\"compiler\":{\"version\":\"0.8.26+commit.8a97fa7a\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"spender\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"Approval\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"Transfer\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"spender\",\"type\":\"address\"}],\"name\":\"allowance\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"spender\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"approve\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"balanceOf\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"totalSupply\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"transfer\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"transferFrom\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"details\":\"Interface of the ERC-20 standard as defined in the ERC.\",\"events\":{\"Approval(address,address,uint256)\":{\"details\":\"Emitted when the allowance of a `spender` for an `owner` is set by a call to {approve}. `value` is the new allowance.\"},\"Transfer(address,address,uint256)\":{\"details\":\"Emitted when `value` tokens are moved from one account (`from`) to another (`to`). Note that `value` may be zero.\"}},\"kind\":\"dev\",\"methods\":{\"allowance(address,address)\":{\"details\":\"Returns the remaining number of tokens that `spender` will be allowed to spend on behalf of `owner` through {transferFrom}. This is zero by default. This value changes when {approve} or {transferFrom} are called.\"},\"approve(address,uint256)\":{\"details\":\"Sets a `value` amount of tokens as the allowance of `spender` over the caller's tokens. Returns a boolean value indicating whether the operation succeeded. IMPORTANT: Beware that changing an allowance with this method brings the risk that someone may use both the old and the new allowance by unfortunate transaction ordering. One possible solution to mitigate this race condition is to first reduce the spender's allowance to 0 and set the desired value afterwards: https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729 Emits an {Approval} event.\"},\"balanceOf(address)\":{\"details\":\"Returns the value of tokens owned by `account`.\"},\"totalSupply()\":{\"details\":\"Returns the value of tokens in existence.\"},\"transfer(address,uint256)\":{\"details\":\"Moves a `value` amount of tokens from the caller's account to `to`. Returns a boolean value indicating whether the operation succeeded. Emits a {Transfer} event.\"},\"transferFrom(address,address,uint256)\":{\"details\":\"Moves a `value` amount of tokens from `from` to `to` using the allowance mechanism. `value` is then deducted from the caller's allowance. Returns a boolean value indicating whether the operation succeeded. Emits a {Transfer} event.\"}},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol\":\"IERC20\"},\"evmVersion\":\"cancun\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":false,\"runs\":200},\"remappings\":[\":@ensdomains/=lib/v4-core/node_modules/@ensdomains/\",\":@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/\",\":@uniswap/v3-core/=lib/v3-core/\",\":@uniswap/v3-periphery/=lib/v3-periphery/\",\":ds-test/=lib/forge-std/lib/ds-test/src/\"]},\"sources\":{\"lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol\":{\"keccak256\":\"0xe06a3f08a987af6ad2e1c1e774405d4fe08f1694b67517438b467cecf0da0ef7\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://df6f0c459663c9858b6cba2cda1d14a7d05a985bed6d2de72bd8e78c25ee79db\",\"dweb:/ipfs/QmeTTxZ7qVk9rjEv2R4CpCwdf8UMCcRqDNMvzNxHc3Fnn9\"]}},\"version\":1}",
+					"metadata": "{\"compiler\":{\"version\":\"0.8.26+commit.8a97fa7a\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"spender\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"Approval\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"Transfer\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"spender\",\"type\":\"address\"}],\"name\":\"allowance\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"spender\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"approve\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"balanceOf\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"totalSupply\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"transfer\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"transferFrom\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"details\":\"Interface of the ERC-20 standard as defined in the ERC.\",\"events\":{\"Approval(address,address,uint256)\":{\"details\":\"Emitted when the allowance of a `spender` for an `owner` is set by a call to {approve}. `value` is the new allowance.\"},\"Transfer(address,address,uint256)\":{\"details\":\"Emitted when `value` tokens are moved from one account (`from`) to another (`to`). Note that `value` may be zero.\"}},\"kind\":\"dev\",\"methods\":{\"allowance(address,address)\":{\"details\":\"Returns the remaining number of tokens that `spender` will be allowed to spend on behalf of `owner` through {transferFrom}. This is zero by default. This value changes when {approve} or {transferFrom} are called.\"},\"approve(address,uint256)\":{\"details\":\"Sets a `value` amount of tokens as the allowance of `spender` over the caller's tokens. Returns a boolean value indicating whether the operation succeeded. IMPORTANT: Beware that changing an allowance with this method brings the risk that someone may use both the old and the new allowance by unfortunate transaction ordering. One possible solution to mitigate this race condition is to first reduce the spender's allowance to 0 and set the desired value afterwards: https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729 Emits an {Approval} event.\"},\"balanceOf(address)\":{\"details\":\"Returns the value of tokens owned by `account`.\"},\"totalSupply()\":{\"details\":\"Returns the value of tokens in existence.\"},\"transfer(address,uint256)\":{\"details\":\"Moves a `value` amount of tokens from the caller's account to `to`. Returns a boolean value indicating whether the operation succeeded. Emits a {Transfer} event.\"},\"transferFrom(address,address,uint256)\":{\"details\":\"Moves a `value` amount of tokens from `from` to `to` using the allowance mechanism. `value` is then deducted from the caller's allowance. Returns a boolean value indicating whether the operation succeeded. Emits a {Transfer} event.\"}},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol\":\"IERC20\"},\"evmVersion\":\"cancun\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[\":@ensdomains/=lib/v4-core/node_modules/@ensdomains/\",\":@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/\",\":@uniswap/v3-core/=lib/v3-core/\",\":@uniswap/v3-periphery/=lib/v3-periphery/\",\":ds-test/=lib/forge-std/lib/ds-test/src/\"]},\"sources\":{\"lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol\":{\"keccak256\":\"0xe06a3f08a987af6ad2e1c1e774405d4fe08f1694b67517438b467cecf0da0ef7\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://df6f0c459663c9858b6cba2cda1d14a7d05a985bed6d2de72bd8e78c25ee79db\",\"dweb:/ipfs/QmeTTxZ7qVk9rjEv2R4CpCwdf8UMCcRqDNMvzNxHc3Fnn9\"]}},\"version\":1}",
 					"storageLayout": {
 						"storage": [],
 						"types": null
@@ -615,7 +618,7 @@
 							"transferFrom(address,address,uint256)": "23b872dd"
 						}
 					},
-					"metadata": "{\"compiler\":{\"version\":\"0.8.26+commit.8a97fa7a\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"spender\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"Approval\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"Transfer\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"spender\",\"type\":\"address\"}],\"name\":\"allowance\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"spender\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"approve\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"balanceOf\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"decimals\",\"outputs\":[{\"internalType\":\"uint8\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"symbol\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"totalSupply\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"transfer\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"transferFrom\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"details\":\"Interface for the optional metadata functions from the ERC-20 standard.\",\"events\":{\"Approval(address,address,uint256)\":{\"details\":\"Emitted when the allowance of a `spender` for an `owner` is set by a call to {approve}. `value` is the new allowance.\"},\"Transfer(address,address,uint256)\":{\"details\":\"Emitted when `value` tokens are moved from one account (`from`) to another (`to`). Note that `value` may be zero.\"}},\"kind\":\"dev\",\"methods\":{\"allowance(address,address)\":{\"details\":\"Returns the remaining number of tokens that `spender` will be allowed to spend on behalf of `owner` through {transferFrom}. This is zero by default. This value changes when {approve} or {transferFrom} are called.\"},\"approve(address,uint256)\":{\"details\":\"Sets a `value` amount of tokens as the allowance of `spender` over the caller's tokens. Returns a boolean value indicating whether the operation succeeded. IMPORTANT: Beware that changing an allowance with this method brings the risk that someone may use both the old and the new allowance by unfortunate transaction ordering. One possible solution to mitigate this race condition is to first reduce the spender's allowance to 0 and set the desired value afterwards: https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729 Emits an {Approval} event.\"},\"balanceOf(address)\":{\"details\":\"Returns the value of tokens owned by `account`.\"},\"decimals()\":{\"details\":\"Returns the decimals places of the token.\"},\"name()\":{\"details\":\"Returns the name of the token.\"},\"symbol()\":{\"details\":\"Returns the symbol of the token.\"},\"totalSupply()\":{\"details\":\"Returns the value of tokens in existence.\"},\"transfer(address,uint256)\":{\"details\":\"Moves a `value` amount of tokens from the caller's account to `to`. Returns a boolean value indicating whether the operation succeeded. Emits a {Transfer} event.\"},\"transferFrom(address,address,uint256)\":{\"details\":\"Moves a `value` amount of tokens from `from` to `to` using the allowance mechanism. `value` is then deducted from the caller's allowance. Returns a boolean value indicating whether the operation succeeded. Emits a {Transfer} event.\"}},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"lib/openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol\":\"IERC20Metadata\"},\"evmVersion\":\"cancun\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":false,\"runs\":200},\"remappings\":[\":@ensdomains/=lib/v4-core/node_modules/@ensdomains/\",\":@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/\",\":@uniswap/v3-core/=lib/v3-core/\",\":@uniswap/v3-periphery/=lib/v3-periphery/\",\":ds-test/=lib/forge-std/lib/ds-test/src/\"]},\"sources\":{\"lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol\":{\"keccak256\":\"0xe06a3f08a987af6ad2e1c1e774405d4fe08f1694b67517438b467cecf0da0ef7\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://df6f0c459663c9858b6cba2cda1d14a7d05a985bed6d2de72bd8e78c25ee79db\",\"dweb:/ipfs/QmeTTxZ7qVk9rjEv2R4CpCwdf8UMCcRqDNMvzNxHc3Fnn9\"]},\"lib/openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol\":{\"keccak256\":\"0x70f2f713b13b7ce4610bcd0ac9fec0f3cc43693b043abcb8dc40a42a726eb330\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://c13d13304ac79a83ab1c30168967d19e2203342ebbd6a9bbce4db7550522dcbf\",\"dweb:/ipfs/QmeN5jKMN2vw5bhacr6tkg78afbTTZUeaacNHqjWt4Ew1r\"]}},\"version\":1}",
+					"metadata": "{\"compiler\":{\"version\":\"0.8.26+commit.8a97fa7a\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"spender\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"Approval\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"Transfer\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"spender\",\"type\":\"address\"}],\"name\":\"allowance\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"spender\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"approve\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"balanceOf\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"decimals\",\"outputs\":[{\"internalType\":\"uint8\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"symbol\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"totalSupply\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"transfer\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"transferFrom\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"details\":\"Interface for the optional metadata functions from the ERC-20 standard.\",\"events\":{\"Approval(address,address,uint256)\":{\"details\":\"Emitted when the allowance of a `spender` for an `owner` is set by a call to {approve}. `value` is the new allowance.\"},\"Transfer(address,address,uint256)\":{\"details\":\"Emitted when `value` tokens are moved from one account (`from`) to another (`to`). Note that `value` may be zero.\"}},\"kind\":\"dev\",\"methods\":{\"allowance(address,address)\":{\"details\":\"Returns the remaining number of tokens that `spender` will be allowed to spend on behalf of `owner` through {transferFrom}. This is zero by default. This value changes when {approve} or {transferFrom} are called.\"},\"approve(address,uint256)\":{\"details\":\"Sets a `value` amount of tokens as the allowance of `spender` over the caller's tokens. Returns a boolean value indicating whether the operation succeeded. IMPORTANT: Beware that changing an allowance with this method brings the risk that someone may use both the old and the new allowance by unfortunate transaction ordering. One possible solution to mitigate this race condition is to first reduce the spender's allowance to 0 and set the desired value afterwards: https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729 Emits an {Approval} event.\"},\"balanceOf(address)\":{\"details\":\"Returns the value of tokens owned by `account`.\"},\"decimals()\":{\"details\":\"Returns the decimals places of the token.\"},\"name()\":{\"details\":\"Returns the name of the token.\"},\"symbol()\":{\"details\":\"Returns the symbol of the token.\"},\"totalSupply()\":{\"details\":\"Returns the value of tokens in existence.\"},\"transfer(address,uint256)\":{\"details\":\"Moves a `value` amount of tokens from the caller's account to `to`. Returns a boolean value indicating whether the operation succeeded. Emits a {Transfer} event.\"},\"transferFrom(address,address,uint256)\":{\"details\":\"Moves a `value` amount of tokens from `from` to `to` using the allowance mechanism. `value` is then deducted from the caller's allowance. Returns a boolean value indicating whether the operation succeeded. Emits a {Transfer} event.\"}},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"lib/openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol\":\"IERC20Metadata\"},\"evmVersion\":\"cancun\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[\":@ensdomains/=lib/v4-core/node_modules/@ensdomains/\",\":@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/\",\":@uniswap/v3-core/=lib/v3-core/\",\":@uniswap/v3-periphery/=lib/v3-periphery/\",\":ds-test/=lib/forge-std/lib/ds-test/src/\"]},\"sources\":{\"lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol\":{\"keccak256\":\"0xe06a3f08a987af6ad2e1c1e774405d4fe08f1694b67517438b467cecf0da0ef7\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://df6f0c459663c9858b6cba2cda1d14a7d05a985bed6d2de72bd8e78c25ee79db\",\"dweb:/ipfs/QmeTTxZ7qVk9rjEv2R4CpCwdf8UMCcRqDNMvzNxHc3Fnn9\"]},\"lib/openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol\":{\"keccak256\":\"0x70f2f713b13b7ce4610bcd0ac9fec0f3cc43693b043abcb8dc40a42a726eb330\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://c13d13304ac79a83ab1c30168967d19e2203342ebbd6a9bbce4db7550522dcbf\",\"dweb:/ipfs/QmeN5jKMN2vw5bhacr6tkg78afbTTZUeaacNHqjWt4Ew1r\"]}},\"version\":1}",
 					"storageLayout": {
 						"storage": [],
 						"types": null
@@ -627,186 +630,12 @@
 					}
 				}
 			},
-			"src/interfaces/ITokenIface.sol": {
-				"TokenIface": {
+			"src/libraries/FeeDistributor.sol": {
+				"FeeDistributor": {
 					"abi": [
 						{
-							"anonymous": false,
-							"inputs": [
-								{
-									"indexed": true,
-									"internalType": "address",
-									"name": "owner",
-									"type": "address"
-								},
-								{
-									"indexed": true,
-									"internalType": "address",
-									"name": "spender",
-									"type": "address"
-								},
-								{
-									"indexed": false,
-									"internalType": "uint256",
-									"name": "value",
-									"type": "uint256"
-								}
-							],
-							"name": "Approval",
-							"type": "event"
-						},
-						{
-							"anonymous": false,
-							"inputs": [
-								{
-									"indexed": true,
-									"internalType": "address",
-									"name": "from",
-									"type": "address"
-								},
-								{
-									"indexed": true,
-									"internalType": "address",
-									"name": "to",
-									"type": "address"
-								},
-								{
-									"indexed": false,
-									"internalType": "uint256",
-									"name": "value",
-									"type": "uint256"
-								}
-							],
-							"name": "Transfer",
-							"type": "event"
-						},
-						{
-							"inputs": [
-								{
-									"internalType": "address",
-									"name": "owner",
-									"type": "address"
-								},
-								{
-									"internalType": "address",
-									"name": "spender",
-									"type": "address"
-								}
-							],
-							"name": "allowance",
-							"outputs": [
-								{
-									"internalType": "uint256",
-									"name": "",
-									"type": "uint256"
-								}
-							],
-							"stateMutability": "view",
-							"type": "function"
-						},
-						{
-							"inputs": [
-								{
-									"internalType": "address",
-									"name": "spender",
-									"type": "address"
-								},
-								{
-									"internalType": "uint256",
-									"name": "value",
-									"type": "uint256"
-								}
-							],
-							"name": "approve",
-							"outputs": [
-								{
-									"internalType": "bool",
-									"name": "",
-									"type": "bool"
-								}
-							],
-							"stateMutability": "nonpayable",
-							"type": "function"
-						},
-						{
-							"inputs": [
-								{
-									"internalType": "address",
-									"name": "account",
-									"type": "address"
-								}
-							],
-							"name": "balanceOf",
-							"outputs": [
-								{
-									"internalType": "uint256",
-									"name": "",
-									"type": "uint256"
-								}
-							],
-							"stateMutability": "view",
-							"type": "function"
-						},
-						{
-							"inputs": [
-								{
-									"internalType": "address",
-									"name": "user",
-									"type": "address"
-								},
-								{
-									"internalType": "uint256",
-									"name": "amount",
-									"type": "uint256"
-								}
-							],
-							"name": "burnFrom",
-							"outputs": [],
-							"stateMutability": "nonpayable",
-							"type": "function"
-						},
-						{
 							"inputs": [],
-							"name": "decimals",
-							"outputs": [
-								{
-									"internalType": "uint8",
-									"name": "",
-									"type": "uint8"
-								}
-							],
-							"stateMutability": "view",
-							"type": "function"
-						},
-						{
-							"inputs": [],
-							"name": "name",
-							"outputs": [
-								{
-									"internalType": "string",
-									"name": "",
-									"type": "string"
-								}
-							],
-							"stateMutability": "view",
-							"type": "function"
-						},
-						{
-							"inputs": [],
-							"name": "symbol",
-							"outputs": [
-								{
-									"internalType": "string",
-									"name": "",
-									"type": "string"
-								}
-							],
-							"stateMutability": "view",
-							"type": "function"
-						},
-						{
-							"inputs": [],
-							"name": "totalSupply",
+							"name": "BASIS_POINTS_DIVISOR",
 							"outputs": [
 								{
 									"internalType": "uint256",
@@ -815,147 +644,749 @@
 								}
 							],
 							"stateMutability": "view",
-							"type": "function"
-						},
-						{
-							"inputs": [
-								{
-									"internalType": "address",
-									"name": "to",
-									"type": "address"
-								},
-								{
-									"internalType": "uint256",
-									"name": "value",
-									"type": "uint256"
-								}
-							],
-							"name": "transfer",
-							"outputs": [
-								{
-									"internalType": "bool",
-									"name": "",
-									"type": "bool"
-								}
-							],
-							"stateMutability": "nonpayable",
-							"type": "function"
-						},
-						{
-							"inputs": [
-								{
-									"internalType": "address",
-									"name": "from",
-									"type": "address"
-								},
-								{
-									"internalType": "address",
-									"name": "to",
-									"type": "address"
-								},
-								{
-									"internalType": "uint256",
-									"name": "value",
-									"type": "uint256"
-								}
-							],
-							"name": "transferFrom",
-							"outputs": [
-								{
-									"internalType": "bool",
-									"name": "",
-									"type": "bool"
-								}
-							],
-							"stateMutability": "nonpayable",
 							"type": "function"
 						}
 					],
 					"devdoc": {
-						"details": "Interface extending IERC20Metadata with a burnFrom function.",
-						"events": {
-							"Approval(address,address,uint256)": {
-								"details": "Emitted when the allowance of a `spender` for an `owner` is set by a call to {approve}. `value` is the new allowance."
-							},
-							"Transfer(address,address,uint256)": {
-								"details": "Emitted when `value` tokens are moved from one account (`from`) to another (`to`). Note that `value` may be zero."
-							}
-						},
+						"details": "Library for distributing fees between admins and holders.",
 						"kind": "dev",
-						"methods": {
-							"allowance(address,address)": {
-								"details": "Returns the remaining number of tokens that `spender` will be allowed to spend on behalf of `owner` through {transferFrom}. This is zero by default. This value changes when {approve} or {transferFrom} are called."
-							},
-							"approve(address,uint256)": {
-								"details": "Sets a `value` amount of tokens as the allowance of `spender` over the caller's tokens. Returns a boolean value indicating whether the operation succeeded. IMPORTANT: Beware that changing an allowance with this method brings the risk that someone may use both the old and the new allowance by unfortunate transaction ordering. One possible solution to mitigate this race condition is to first reduce the spender's allowance to 0 and set the desired value afterwards: https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729 Emits an {Approval} event."
-							},
-							"balanceOf(address)": {
-								"details": "Returns the value of tokens owned by `account`."
-							},
-							"burnFrom(address,uint256)": {
-								"details": "Burns a specific amount of tokens from a user.",
-								"params": {
-									"amount": "The amount of tokens to burn.",
-									"user": "The address from which tokens will be burned."
-								}
-							},
-							"decimals()": {
-								"details": "Returns the decimals places of the token."
-							},
-							"name()": {
-								"details": "Returns the name of the token."
-							},
-							"symbol()": {
-								"details": "Returns the symbol of the token."
-							},
-							"totalSupply()": {
-								"details": "Returns the value of tokens in existence."
-							},
-							"transfer(address,uint256)": {
-								"details": "Moves a `value` amount of tokens from the caller's account to `to`. Returns a boolean value indicating whether the operation succeeded. Emits a {Transfer} event."
-							},
-							"transferFrom(address,address,uint256)": {
-								"details": "Moves a `value` amount of tokens from `from` to `to` using the allowance mechanism. `value` is then deducted from the caller's allowance. Returns a boolean value indicating whether the operation succeeded. Emits a {Transfer} event."
-							}
-						},
-						"title": "TokenIface",
+						"methods": {},
+						"title": "FeeDistributor",
 						"version": 1
 					},
 					"evm": {
-						"assembly": "",
+						"assembly": "    /* \"src/libraries/FeeDistributor.sol\":188:706  library FeeDistributor {... */\n  dataSize(sub_0)\n  dataOffset(sub_0)\n  0x0b\n  dup3\n  dup3\n  dup3\n  codecopy\n  dup1\n  mload\n  0x00\n  byte\n  0x73\n  eq\n  tag_1\n  jumpi\n  mstore(0x00, shl(0xe0, 0x4e487b71))\n  mstore(0x04, 0x00)\n  revert(0x00, 0x24)\ntag_1:\n  mstore(0x00, address)\n  0x73\n  dup2\n  mstore8\n  dup3\n  dup2\n  return\nstop\n\nsub_0: assembly {\n        /* \"src/libraries/FeeDistributor.sol\":188:706  library FeeDistributor {... */\n      eq(address, deployTimeAddress())\n      mstore(0x40, 0x80)\n      jumpi(tag_1, lt(calldatasize, 0x04))\n      shr(0xe0, calldataload(0x00))\n      dup1\n      0x126082cf\n      eq\n      tag_2\n      jumpi\n    tag_1:\n      0x00\n      dup1\n      revert\n        /* \"src/libraries/FeeDistributor.sol\":217:269  uint256 public constant BASIS_POINTS_DIVISOR = 10000 */\n    tag_2:\n      tag_3\n        /* \"src/libraries/FeeDistributor.sol\":264:269  10000 */\n      0x2710\n        /* \"src/libraries/FeeDistributor.sol\":217:269  uint256 public constant BASIS_POINTS_DIVISOR = 10000 */\n      dup2\n      jump\n    tag_3:\n      mload(0x40)\n        /* \"#utility.yul\":168:193   */\n      swap1\n      dup2\n      mstore\n        /* \"#utility.yul\":156:158   */\n      0x20\n        /* \"#utility.yul\":141:159   */\n      add\n        /* \"src/libraries/FeeDistributor.sol\":217:269  uint256 public constant BASIS_POINTS_DIVISOR = 10000 */\n      mload(0x40)\n      dup1\n      swap2\n      sub\n      swap1\n      return\n\n    auxdata: 0xa26469706673582212203a4288b5f1acde05c216e993c25dacef845a4bfcbf28748e080631181902275564736f6c634300081a0033\n}\n",
 						"bytecode": {
 							"functionDebugData": {},
 							"generatedSources": [],
 							"linkReferences": {},
-							"object": "",
-							"opcodes": "",
-							"sourceMap": ""
+							"object": "60866032600b8282823980515f1a607314602657634e487b7160e01b5f525f60045260245ffd5b305f52607381538281f3fe73000000000000000000000000000000000000000030146080604052600436106032575f3560e01c8063126082cf146036575b5f80fd5b603e61271081565b60405190815260200160405180910390f3fea26469706673582212203a4288b5f1acde05c216e993c25dacef845a4bfcbf28748e080631181902275564736f6c634300081a0033",
+							"opcodes": "PUSH1 0x86 PUSH1 0x32 PUSH1 0xB DUP3 DUP3 DUP3 CODECOPY DUP1 MLOAD PUSH0 BYTE PUSH1 0x73 EQ PUSH1 0x26 JUMPI PUSH4 0x4E487B71 PUSH1 0xE0 SHL PUSH0 MSTORE PUSH0 PUSH1 0x4 MSTORE PUSH1 0x24 PUSH0 REVERT JUMPDEST ADDRESS PUSH0 MSTORE PUSH1 0x73 DUP2 MSTORE8 DUP3 DUP2 RETURN INVALID PUSH20 0x0 ADDRESS EQ PUSH1 0x80 PUSH1 0x40 MSTORE PUSH1 0x4 CALLDATASIZE LT PUSH1 0x32 JUMPI PUSH0 CALLDATALOAD PUSH1 0xE0 SHR DUP1 PUSH4 0x126082CF EQ PUSH1 0x36 JUMPI JUMPDEST PUSH0 DUP1 REVERT JUMPDEST PUSH1 0x3E PUSH2 0x2710 DUP2 JUMP JUMPDEST PUSH1 0x40 MLOAD SWAP1 DUP2 MSTORE PUSH1 0x20 ADD PUSH1 0x40 MLOAD DUP1 SWAP2 SUB SWAP1 RETURN INVALID LOG2 PUSH5 0x6970667358 0x22 SLT KECCAK256 GASPRICE TIMESTAMP DUP9 0xB5 CALL 0xAC 0xDE SDIV 0xC2 AND 0xE9 SWAP4 0xC2 TSTORE 0xAC 0xEF DUP5 GAS 0x4B 0xFC 0xBF 0x28 PUSH21 0x8E080631181902275564736F6C634300081A003300 ",
+							"sourceMap": "188:518:3:-:0;;;;;;;;;;;;;;;-1:-1:-1;;;188:518:3;;;;;;;;;;;;;;;;;"
 						},
 						"deployedBytecode": {
-							"functionDebugData": {},
-							"generatedSources": [],
+							"functionDebugData": {
+								"@BASIS_POINTS_DIVISOR_128": {
+									"entryPoint": null,
+									"id": 128,
+									"parameterSlots": 0,
+									"returnSlots": 0
+								},
+								"abi_encode_tuple_t_uint256__to_t_uint256__fromStack_library_reversed": {
+									"entryPoint": null,
+									"id": null,
+									"parameterSlots": 2,
+									"returnSlots": 1
+								}
+							},
+							"generatedSources": [
+								{
+									"ast": {
+										"nativeSrc": "0:201:4",
+										"nodeType": "YulBlock",
+										"src": "0:201:4",
+										"statements": [
+											{
+												"nativeSrc": "6:3:4",
+												"nodeType": "YulBlock",
+												"src": "6:3:4",
+												"statements": []
+											},
+											{
+												"body": {
+													"nativeSrc": "123:76:4",
+													"nodeType": "YulBlock",
+													"src": "123:76:4",
+													"statements": [
+														{
+															"nativeSrc": "133:26:4",
+															"nodeType": "YulAssignment",
+															"src": "133:26:4",
+															"value": {
+																"arguments": [
+																	{
+																		"name": "headStart",
+																		"nativeSrc": "145:9:4",
+																		"nodeType": "YulIdentifier",
+																		"src": "145:9:4"
+																	},
+																	{
+																		"kind": "number",
+																		"nativeSrc": "156:2:4",
+																		"nodeType": "YulLiteral",
+																		"src": "156:2:4",
+																		"type": "",
+																		"value": "32"
+																	}
+																],
+																"functionName": {
+																	"name": "add",
+																	"nativeSrc": "141:3:4",
+																	"nodeType": "YulIdentifier",
+																	"src": "141:3:4"
+																},
+																"nativeSrc": "141:18:4",
+																"nodeType": "YulFunctionCall",
+																"src": "141:18:4"
+															},
+															"variableNames": [
+																{
+																	"name": "tail",
+																	"nativeSrc": "133:4:4",
+																	"nodeType": "YulIdentifier",
+																	"src": "133:4:4"
+																}
+															]
+														},
+														{
+															"expression": {
+																"arguments": [
+																	{
+																		"name": "headStart",
+																		"nativeSrc": "175:9:4",
+																		"nodeType": "YulIdentifier",
+																		"src": "175:9:4"
+																	},
+																	{
+																		"name": "value0",
+																		"nativeSrc": "186:6:4",
+																		"nodeType": "YulIdentifier",
+																		"src": "186:6:4"
+																	}
+																],
+																"functionName": {
+																	"name": "mstore",
+																	"nativeSrc": "168:6:4",
+																	"nodeType": "YulIdentifier",
+																	"src": "168:6:4"
+																},
+																"nativeSrc": "168:25:4",
+																"nodeType": "YulFunctionCall",
+																"src": "168:25:4"
+															},
+															"nativeSrc": "168:25:4",
+															"nodeType": "YulExpressionStatement",
+															"src": "168:25:4"
+														}
+													]
+												},
+												"name": "abi_encode_tuple_t_uint256__to_t_uint256__fromStack_library_reversed",
+												"nativeSrc": "14:185:4",
+												"nodeType": "YulFunctionDefinition",
+												"parameters": [
+													{
+														"name": "headStart",
+														"nativeSrc": "92:9:4",
+														"nodeType": "YulTypedName",
+														"src": "92:9:4",
+														"type": ""
+													},
+													{
+														"name": "value0",
+														"nativeSrc": "103:6:4",
+														"nodeType": "YulTypedName",
+														"src": "103:6:4",
+														"type": ""
+													}
+												],
+												"returnVariables": [
+													{
+														"name": "tail",
+														"nativeSrc": "114:4:4",
+														"nodeType": "YulTypedName",
+														"src": "114:4:4",
+														"type": ""
+													}
+												],
+												"src": "14:185:4"
+											}
+										]
+									},
+									"contents": "{\n    { }\n    function abi_encode_tuple_t_uint256__to_t_uint256__fromStack_library_reversed(headStart, value0) -> tail\n    {\n        tail := add(headStart, 32)\n        mstore(headStart, value0)\n    }\n}",
+									"id": 4,
+									"language": "Yul",
+									"name": "#utility.yul"
+								}
+							],
 							"immutableReferences": {},
 							"linkReferences": {},
-							"object": "",
-							"opcodes": "",
-							"sourceMap": ""
+							"object": "73000000000000000000000000000000000000000030146080604052600436106032575f3560e01c8063126082cf146036575b5f80fd5b603e61271081565b60405190815260200160405180910390f3fea26469706673582212203a4288b5f1acde05c216e993c25dacef845a4bfcbf28748e080631181902275564736f6c634300081a0033",
+							"opcodes": "PUSH20 0x0 ADDRESS EQ PUSH1 0x80 PUSH1 0x40 MSTORE PUSH1 0x4 CALLDATASIZE LT PUSH1 0x32 JUMPI PUSH0 CALLDATALOAD PUSH1 0xE0 SHR DUP1 PUSH4 0x126082CF EQ PUSH1 0x36 JUMPI JUMPDEST PUSH0 DUP1 REVERT JUMPDEST PUSH1 0x3E PUSH2 0x2710 DUP2 JUMP JUMPDEST PUSH1 0x40 MLOAD SWAP1 DUP2 MSTORE PUSH1 0x20 ADD PUSH1 0x40 MLOAD DUP1 SWAP2 SUB SWAP1 RETURN INVALID LOG2 PUSH5 0x6970667358 0x22 SLT KECCAK256 GASPRICE TIMESTAMP DUP9 0xB5 CALL 0xAC 0xDE SDIV 0xC2 AND 0xE9 SWAP4 0xC2 TSTORE 0xAC 0xEF DUP5 GAS 0x4B 0xFC 0xBF 0x28 PUSH21 0x8E080631181902275564736F6C634300081A003300 ",
+							"sourceMap": "188:518:3:-:0;;;;;;;;;;;;;;;;;;;;;;;;217:52;;264:5;217:52;;;;;168:25:4;;;156:2;141:18;217:52:3;;;;;;"
 						},
-						"gasEstimates": null,
-						"legacyAssembly": null,
+						"gasEstimates": {
+							"creation": {
+								"codeDepositCost": "26800",
+								"executionCost": "108",
+								"totalCost": "26908"
+							},
+							"external": {
+								"BASIS_POINTS_DIVISOR()": "144"
+							},
+							"internal": {
+								"distributeFees(struct LiquidityPool storage pointer,uint256)": "infinite"
+							}
+						},
+						"legacyAssembly": {
+							".code": [
+								{
+									"begin": 188,
+									"end": 706,
+									"name": "PUSH #[$]",
+									"source": 3,
+									"value": "0000000000000000000000000000000000000000000000000000000000000000"
+								},
+								{
+									"begin": 188,
+									"end": 706,
+									"name": "PUSH [$]",
+									"source": 3,
+									"value": "0000000000000000000000000000000000000000000000000000000000000000"
+								},
+								{
+									"begin": 188,
+									"end": 706,
+									"name": "PUSH",
+									"source": 3,
+									"value": "B"
+								},
+								{
+									"begin": 188,
+									"end": 706,
+									"name": "DUP3",
+									"source": 3
+								},
+								{
+									"begin": 188,
+									"end": 706,
+									"name": "DUP3",
+									"source": 3
+								},
+								{
+									"begin": 188,
+									"end": 706,
+									"name": "DUP3",
+									"source": 3
+								},
+								{
+									"begin": 188,
+									"end": 706,
+									"name": "CODECOPY",
+									"source": 3
+								},
+								{
+									"begin": 188,
+									"end": 706,
+									"name": "DUP1",
+									"source": 3
+								},
+								{
+									"begin": 188,
+									"end": 706,
+									"name": "MLOAD",
+									"source": 3
+								},
+								{
+									"begin": 188,
+									"end": 706,
+									"name": "PUSH",
+									"source": 3,
+									"value": "0"
+								},
+								{
+									"begin": 188,
+									"end": 706,
+									"name": "BYTE",
+									"source": 3
+								},
+								{
+									"begin": 188,
+									"end": 706,
+									"name": "PUSH",
+									"source": 3,
+									"value": "73"
+								},
+								{
+									"begin": 188,
+									"end": 706,
+									"name": "EQ",
+									"source": 3
+								},
+								{
+									"begin": 188,
+									"end": 706,
+									"name": "PUSH [tag]",
+									"source": 3,
+									"value": "1"
+								},
+								{
+									"begin": 188,
+									"end": 706,
+									"name": "JUMPI",
+									"source": 3
+								},
+								{
+									"begin": -1,
+									"end": -1,
+									"name": "PUSH",
+									"source": -1,
+									"value": "4E487B71"
+								},
+								{
+									"begin": -1,
+									"end": -1,
+									"name": "PUSH",
+									"source": -1,
+									"value": "E0"
+								},
+								{
+									"begin": -1,
+									"end": -1,
+									"name": "SHL",
+									"source": -1
+								},
+								{
+									"begin": 188,
+									"end": 706,
+									"name": "PUSH",
+									"source": 3,
+									"value": "0"
+								},
+								{
+									"begin": 188,
+									"end": 706,
+									"name": "MSTORE",
+									"source": 3
+								},
+								{
+									"begin": 188,
+									"end": 706,
+									"name": "PUSH",
+									"source": 3,
+									"value": "0"
+								},
+								{
+									"begin": 188,
+									"end": 706,
+									"name": "PUSH",
+									"source": 3,
+									"value": "4"
+								},
+								{
+									"begin": 188,
+									"end": 706,
+									"name": "MSTORE",
+									"source": 3
+								},
+								{
+									"begin": 188,
+									"end": 706,
+									"name": "PUSH",
+									"source": 3,
+									"value": "24"
+								},
+								{
+									"begin": 188,
+									"end": 706,
+									"name": "PUSH",
+									"source": 3,
+									"value": "0"
+								},
+								{
+									"begin": 188,
+									"end": 706,
+									"name": "REVERT",
+									"source": 3
+								},
+								{
+									"begin": 188,
+									"end": 706,
+									"name": "tag",
+									"source": 3,
+									"value": "1"
+								},
+								{
+									"begin": 188,
+									"end": 706,
+									"name": "JUMPDEST",
+									"source": 3
+								},
+								{
+									"begin": 188,
+									"end": 706,
+									"name": "ADDRESS",
+									"source": 3
+								},
+								{
+									"begin": 188,
+									"end": 706,
+									"name": "PUSH",
+									"source": 3,
+									"value": "0"
+								},
+								{
+									"begin": 188,
+									"end": 706,
+									"name": "MSTORE",
+									"source": 3
+								},
+								{
+									"begin": 188,
+									"end": 706,
+									"name": "PUSH",
+									"source": 3,
+									"value": "73"
+								},
+								{
+									"begin": 188,
+									"end": 706,
+									"name": "DUP2",
+									"source": 3
+								},
+								{
+									"begin": 188,
+									"end": 706,
+									"name": "MSTORE8",
+									"source": 3
+								},
+								{
+									"begin": 188,
+									"end": 706,
+									"name": "DUP3",
+									"source": 3
+								},
+								{
+									"begin": 188,
+									"end": 706,
+									"name": "DUP2",
+									"source": 3
+								},
+								{
+									"begin": 188,
+									"end": 706,
+									"name": "RETURN",
+									"source": 3
+								}
+							],
+							".data": {
+								"0": {
+									".auxdata": "a26469706673582212203a4288b5f1acde05c216e993c25dacef845a4bfcbf28748e080631181902275564736f6c634300081a0033",
+									".code": [
+										{
+											"begin": 188,
+											"end": 706,
+											"name": "PUSHDEPLOYADDRESS",
+											"source": 3
+										},
+										{
+											"begin": 188,
+											"end": 706,
+											"name": "ADDRESS",
+											"source": 3
+										},
+										{
+											"begin": 188,
+											"end": 706,
+											"name": "EQ",
+											"source": 3
+										},
+										{
+											"begin": 188,
+											"end": 706,
+											"name": "PUSH",
+											"source": 3,
+											"value": "80"
+										},
+										{
+											"begin": 188,
+											"end": 706,
+											"name": "PUSH",
+											"source": 3,
+											"value": "40"
+										},
+										{
+											"begin": 188,
+											"end": 706,
+											"name": "MSTORE",
+											"source": 3
+										},
+										{
+											"begin": 188,
+											"end": 706,
+											"name": "PUSH",
+											"source": 3,
+											"value": "4"
+										},
+										{
+											"begin": 188,
+											"end": 706,
+											"name": "CALLDATASIZE",
+											"source": 3
+										},
+										{
+											"begin": 188,
+											"end": 706,
+											"name": "LT",
+											"source": 3
+										},
+										{
+											"begin": 188,
+											"end": 706,
+											"name": "PUSH [tag]",
+											"source": 3,
+											"value": "1"
+										},
+										{
+											"begin": 188,
+											"end": 706,
+											"name": "JUMPI",
+											"source": 3
+										},
+										{
+											"begin": 188,
+											"end": 706,
+											"name": "PUSH",
+											"source": 3,
+											"value": "0"
+										},
+										{
+											"begin": 188,
+											"end": 706,
+											"name": "CALLDATALOAD",
+											"source": 3
+										},
+										{
+											"begin": 188,
+											"end": 706,
+											"name": "PUSH",
+											"source": 3,
+											"value": "E0"
+										},
+										{
+											"begin": 188,
+											"end": 706,
+											"name": "SHR",
+											"source": 3
+										},
+										{
+											"begin": 188,
+											"end": 706,
+											"name": "DUP1",
+											"source": 3
+										},
+										{
+											"begin": 188,
+											"end": 706,
+											"name": "PUSH",
+											"source": 3,
+											"value": "126082CF"
+										},
+										{
+											"begin": 188,
+											"end": 706,
+											"name": "EQ",
+											"source": 3
+										},
+										{
+											"begin": 188,
+											"end": 706,
+											"name": "PUSH [tag]",
+											"source": 3,
+											"value": "2"
+										},
+										{
+											"begin": 188,
+											"end": 706,
+											"name": "JUMPI",
+											"source": 3
+										},
+										{
+											"begin": 188,
+											"end": 706,
+											"name": "tag",
+											"source": 3,
+											"value": "1"
+										},
+										{
+											"begin": 188,
+											"end": 706,
+											"name": "JUMPDEST",
+											"source": 3
+										},
+										{
+											"begin": 188,
+											"end": 706,
+											"name": "PUSH",
+											"source": 3,
+											"value": "0"
+										},
+										{
+											"begin": 188,
+											"end": 706,
+											"name": "DUP1",
+											"source": 3
+										},
+										{
+											"begin": 188,
+											"end": 706,
+											"name": "REVERT",
+											"source": 3
+										},
+										{
+											"begin": 217,
+											"end": 269,
+											"name": "tag",
+											"source": 3,
+											"value": "2"
+										},
+										{
+											"begin": 217,
+											"end": 269,
+											"name": "JUMPDEST",
+											"source": 3
+										},
+										{
+											"begin": 217,
+											"end": 269,
+											"name": "PUSH [tag]",
+											"source": 3,
+											"value": "3"
+										},
+										{
+											"begin": 264,
+											"end": 269,
+											"name": "PUSH",
+											"source": 3,
+											"value": "2710"
+										},
+										{
+											"begin": 217,
+											"end": 269,
+											"name": "DUP2",
+											"source": 3
+										},
+										{
+											"begin": 217,
+											"end": 269,
+											"name": "JUMP",
+											"source": 3
+										},
+										{
+											"begin": 217,
+											"end": 269,
+											"name": "tag",
+											"source": 3,
+											"value": "3"
+										},
+										{
+											"begin": 217,
+											"end": 269,
+											"name": "JUMPDEST",
+											"source": 3
+										},
+										{
+											"begin": 217,
+											"end": 269,
+											"name": "PUSH",
+											"source": 3,
+											"value": "40"
+										},
+										{
+											"begin": 217,
+											"end": 269,
+											"name": "MLOAD",
+											"source": 3
+										},
+										{
+											"begin": 168,
+											"end": 193,
+											"name": "SWAP1",
+											"source": 4
+										},
+										{
+											"begin": 168,
+											"end": 193,
+											"name": "DUP2",
+											"source": 4
+										},
+										{
+											"begin": 168,
+											"end": 193,
+											"name": "MSTORE",
+											"source": 4
+										},
+										{
+											"begin": 156,
+											"end": 158,
+											"name": "PUSH",
+											"source": 4,
+											"value": "20"
+										},
+										{
+											"begin": 141,
+											"end": 159,
+											"name": "ADD",
+											"source": 4
+										},
+										{
+											"begin": 217,
+											"end": 269,
+											"name": "PUSH",
+											"source": 3,
+											"value": "40"
+										},
+										{
+											"begin": 217,
+											"end": 269,
+											"name": "MLOAD",
+											"source": 3
+										},
+										{
+											"begin": 217,
+											"end": 269,
+											"name": "DUP1",
+											"source": 3
+										},
+										{
+											"begin": 217,
+											"end": 269,
+											"name": "SWAP2",
+											"source": 3
+										},
+										{
+											"begin": 217,
+											"end": 269,
+											"name": "SUB",
+											"source": 3
+										},
+										{
+											"begin": 217,
+											"end": 269,
+											"name": "SWAP1",
+											"source": 3
+										},
+										{
+											"begin": 217,
+											"end": 269,
+											"name": "RETURN",
+											"source": 3
+										}
+									]
+								}
+							},
+							"sourceList": [
+								"lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol",
+								"lib/openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol",
+								"src/LiquidityPool.sol",
+								"src/libraries/FeeDistributor.sol",
+								"#utility.yul"
+							]
+						},
 						"methodIdentifiers": {
-							"allowance(address,address)": "dd62ed3e",
-							"approve(address,uint256)": "095ea7b3",
-							"balanceOf(address)": "70a08231",
-							"burnFrom(address,uint256)": "79cc6790",
-							"decimals()": "313ce567",
-							"name()": "06fdde03",
-							"symbol()": "95d89b41",
-							"totalSupply()": "18160ddd",
-							"transfer(address,uint256)": "a9059cbb",
-							"transferFrom(address,address,uint256)": "23b872dd"
+							"BASIS_POINTS_DIVISOR()": "126082cf"
 						}
 					},
-					"metadata": "{\"compiler\":{\"version\":\"0.8.26+commit.8a97fa7a\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"spender\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"Approval\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"Transfer\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"spender\",\"type\":\"address\"}],\"name\":\"allowance\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"spender\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"approve\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"balanceOf\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"user\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"burnFrom\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"decimals\",\"outputs\":[{\"internalType\":\"uint8\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"symbol\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"totalSupply\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"transfer\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"transferFrom\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"details\":\"Interface extending IERC20Metadata with a burnFrom function.\",\"events\":{\"Approval(address,address,uint256)\":{\"details\":\"Emitted when the allowance of a `spender` for an `owner` is set by a call to {approve}. `value` is the new allowance.\"},\"Transfer(address,address,uint256)\":{\"details\":\"Emitted when `value` tokens are moved from one account (`from`) to another (`to`). Note that `value` may be zero.\"}},\"kind\":\"dev\",\"methods\":{\"allowance(address,address)\":{\"details\":\"Returns the remaining number of tokens that `spender` will be allowed to spend on behalf of `owner` through {transferFrom}. This is zero by default. This value changes when {approve} or {transferFrom} are called.\"},\"approve(address,uint256)\":{\"details\":\"Sets a `value` amount of tokens as the allowance of `spender` over the caller's tokens. Returns a boolean value indicating whether the operation succeeded. IMPORTANT: Beware that changing an allowance with this method brings the risk that someone may use both the old and the new allowance by unfortunate transaction ordering. One possible solution to mitigate this race condition is to first reduce the spender's allowance to 0 and set the desired value afterwards: https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729 Emits an {Approval} event.\"},\"balanceOf(address)\":{\"details\":\"Returns the value of tokens owned by `account`.\"},\"burnFrom(address,uint256)\":{\"details\":\"Burns a specific amount of tokens from a user.\",\"params\":{\"amount\":\"The amount of tokens to burn.\",\"user\":\"The address from which tokens will be burned.\"}},\"decimals()\":{\"details\":\"Returns the decimals places of the token.\"},\"name()\":{\"details\":\"Returns the name of the token.\"},\"symbol()\":{\"details\":\"Returns the symbol of the token.\"},\"totalSupply()\":{\"details\":\"Returns the value of tokens in existence.\"},\"transfer(address,uint256)\":{\"details\":\"Moves a `value` amount of tokens from the caller's account to `to`. Returns a boolean value indicating whether the operation succeeded. Emits a {Transfer} event.\"},\"transferFrom(address,address,uint256)\":{\"details\":\"Moves a `value` amount of tokens from `from` to `to` using the allowance mechanism. `value` is then deducted from the caller's allowance. Returns a boolean value indicating whether the operation succeeded. Emits a {Transfer} event.\"}},\"title\":\"TokenIface\",\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"src/interfaces/ITokenIface.sol\":\"TokenIface\"},\"evmVersion\":\"cancun\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":false,\"runs\":200},\"remappings\":[\":@ensdomains/=lib/v4-core/node_modules/@ensdomains/\",\":@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/\",\":@uniswap/v3-core/=lib/v3-core/\",\":@uniswap/v3-periphery/=lib/v3-periphery/\",\":ds-test/=lib/forge-std/lib/ds-test/src/\"]},\"sources\":{\"lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol\":{\"keccak256\":\"0xe06a3f08a987af6ad2e1c1e774405d4fe08f1694b67517438b467cecf0da0ef7\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://df6f0c459663c9858b6cba2cda1d14a7d05a985bed6d2de72bd8e78c25ee79db\",\"dweb:/ipfs/QmeTTxZ7qVk9rjEv2R4CpCwdf8UMCcRqDNMvzNxHc3Fnn9\"]},\"lib/openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol\":{\"keccak256\":\"0x70f2f713b13b7ce4610bcd0ac9fec0f3cc43693b043abcb8dc40a42a726eb330\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://c13d13304ac79a83ab1c30168967d19e2203342ebbd6a9bbce4db7550522dcbf\",\"dweb:/ipfs/QmeN5jKMN2vw5bhacr6tkg78afbTTZUeaacNHqjWt4Ew1r\"]},\"src/interfaces/ITokenIface.sol\":{\"keccak256\":\"0x5346e22937f725e569010a876d267eeeac7a718663f581721750a8a378209bfa\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://2dcf71606d69eacd85c6acf6c31a70cddfa78db50f1175512375b9f9cbdee237\",\"dweb:/ipfs/QmdQ5Z1jwqneSMFDTLgERs7PZVSmu5xkzdmGxTLmwetH7c\"]}},\"version\":1}",
+					"metadata": "{\"compiler\":{\"version\":\"0.8.26+commit.8a97fa7a\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[],\"name\":\"BASIS_POINTS_DIVISOR\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"}],\"devdoc\":{\"details\":\"Library for distributing fees between admins and holders.\",\"kind\":\"dev\",\"methods\":{},\"title\":\"FeeDistributor\",\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"src/libraries/FeeDistributor.sol\":\"FeeDistributor\"},\"evmVersion\":\"cancun\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[\":@ensdomains/=lib/v4-core/node_modules/@ensdomains/\",\":@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/\",\":@uniswap/v3-core/=lib/v3-core/\",\":@uniswap/v3-periphery/=lib/v3-periphery/\",\":ds-test/=lib/forge-std/lib/ds-test/src/\"]},\"sources\":{\"lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol\":{\"keccak256\":\"0xe06a3f08a987af6ad2e1c1e774405d4fe08f1694b67517438b467cecf0da0ef7\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://df6f0c459663c9858b6cba2cda1d14a7d05a985bed6d2de72bd8e78c25ee79db\",\"dweb:/ipfs/QmeTTxZ7qVk9rjEv2R4CpCwdf8UMCcRqDNMvzNxHc3Fnn9\"]},\"lib/openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol\":{\"keccak256\":\"0x70f2f713b13b7ce4610bcd0ac9fec0f3cc43693b043abcb8dc40a42a726eb330\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://c13d13304ac79a83ab1c30168967d19e2203342ebbd6a9bbce4db7550522dcbf\",\"dweb:/ipfs/QmeN5jKMN2vw5bhacr6tkg78afbTTZUeaacNHqjWt4Ew1r\"]},\"src/LiquidityPool.sol\":{\"keccak256\":\"0x11ea988a9be8c3576c7f3ce8fa985021b8a1b75c83e4bad9b39e7d30d9edb66c\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://13d6cbe5a79c5ab34eb8eda30d23eeef47b305840c566aff6a4dacbafe96505b\",\"dweb:/ipfs/QmfGtBgZ55Pap2cw79XoBTCZHrsoKdQqytRDoKKxXhy51R\"]},\"src/libraries/FeeDistributor.sol\":{\"keccak256\":\"0x182f1db1362673442050a6879e1f49d9c9b3ad51bfa359737d13ad85803c1747\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://001c203c593f8e738db7473ea1ed1434f017ddee10a2481175b0ec9bc4a261b7\",\"dweb:/ipfs/QmT4MSDTRYBqaRK7KEUru4JLF39pLdbw2DpxNaLxGbfWJG\"]}},\"version\":1}",
 					"storageLayout": {
 						"storage": [],
 						"types": null
@@ -2177,9 +2608,9 @@
 				},
 				"id": 1
 			},
-			"src/interfaces/ITokenIface.sol": {
+			"src/LiquidityPool.sol": {
 				"ast": {
-					"absolutePath": "src/interfaces/ITokenIface.sol",
+					"absolutePath": "src/LiquidityPool.sol",
 					"exportedSymbols": {
 						"IERC20": [
 							77
@@ -2187,11 +2618,11 @@
 						"IERC20Metadata": [
 							103
 						],
-						"TokenIface": [
-							118
+						"LiquidityPool": [
+							121
 						]
 					},
-					"id": 119,
+					"id": 122,
 					"license": "MIT",
 					"nodeType": "SourceUnit",
 					"nodes": [
@@ -2204,7 +2635,7 @@
 								".0"
 							],
 							"nodeType": "PragmaDirective",
-							"src": "72:23:2"
+							"src": "32:23:2"
 						},
 						{
 							"absolutePath": "lib/openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol",
@@ -2212,107 +2643,713 @@
 							"id": 106,
 							"nameLocation": "-1:-1:-1",
 							"nodeType": "ImportDirective",
-							"scope": 119,
+							"scope": 122,
 							"sourceUnit": 104,
-							"src": "97:75:2",
+							"src": "57:75:2",
+							"symbolAliases": [],
+							"unitAlias": ""
+						},
+						{
+							"canonicalName": "LiquidityPool",
+							"documentation": {
+								"id": 107,
+								"nodeType": "StructuredDocumentation",
+								"src": "134:82:2",
+								"text": " @title LiquidityPool\n @dev Defines the structure of a liquidity pool."
+							},
+							"id": 121,
+							"members": [
+								{
+									"constant": false,
+									"id": 110,
+									"mutability": "mutable",
+									"name": "token",
+									"nameLocation": "259:5:2",
+									"nodeType": "VariableDeclaration",
+									"scope": 121,
+									"src": "244:20:2",
+									"stateVariable": false,
+									"storageLocation": "default",
+									"typeDescriptions": {
+										"typeIdentifier": "t_contract$_IERC20Metadata_$103",
+										"typeString": "contract IERC20Metadata"
+									},
+									"typeName": {
+										"id": 109,
+										"nodeType": "UserDefinedTypeName",
+										"pathNode": {
+											"id": 108,
+											"name": "IERC20Metadata",
+											"nameLocations": [
+												"244:14:2"
+											],
+											"nodeType": "IdentifierPath",
+											"referencedDeclaration": 103,
+											"src": "244:14:2"
+										},
+										"referencedDeclaration": 103,
+										"src": "244:14:2",
+										"typeDescriptions": {
+											"typeIdentifier": "t_contract$_IERC20Metadata_$103",
+											"typeString": "contract IERC20Metadata"
+										}
+									},
+									"visibility": "internal"
+								},
+								{
+									"constant": false,
+									"id": 112,
+									"mutability": "mutable",
+									"name": "totalDeposits",
+									"nameLocation": "278:13:2",
+									"nodeType": "VariableDeclaration",
+									"scope": 121,
+									"src": "270:21:2",
+									"stateVariable": false,
+									"storageLocation": "default",
+									"typeDescriptions": {
+										"typeIdentifier": "t_uint256",
+										"typeString": "uint256"
+									},
+									"typeName": {
+										"id": 111,
+										"name": "uint256",
+										"nodeType": "ElementaryTypeName",
+										"src": "270:7:2",
+										"typeDescriptions": {
+											"typeIdentifier": "t_uint256",
+											"typeString": "uint256"
+										}
+									},
+									"visibility": "internal"
+								},
+								{
+									"constant": false,
+									"id": 114,
+									"mutability": "mutable",
+									"name": "totalBorrowed",
+									"nameLocation": "305:13:2",
+									"nodeType": "VariableDeclaration",
+									"scope": 121,
+									"src": "297:21:2",
+									"stateVariable": false,
+									"storageLocation": "default",
+									"typeDescriptions": {
+										"typeIdentifier": "t_uint256",
+										"typeString": "uint256"
+									},
+									"typeName": {
+										"id": 113,
+										"name": "uint256",
+										"nodeType": "ElementaryTypeName",
+										"src": "297:7:2",
+										"typeDescriptions": {
+											"typeIdentifier": "t_uint256",
+											"typeString": "uint256"
+										}
+									},
+									"visibility": "internal"
+								},
+								{
+									"constant": false,
+									"id": 116,
+									"mutability": "mutable",
+									"name": "totalFees",
+									"nameLocation": "332:9:2",
+									"nodeType": "VariableDeclaration",
+									"scope": 121,
+									"src": "324:17:2",
+									"stateVariable": false,
+									"storageLocation": "default",
+									"typeDescriptions": {
+										"typeIdentifier": "t_uint256",
+										"typeString": "uint256"
+									},
+									"typeName": {
+										"id": 115,
+										"name": "uint256",
+										"nodeType": "ElementaryTypeName",
+										"src": "324:7:2",
+										"typeDescriptions": {
+											"typeIdentifier": "t_uint256",
+											"typeString": "uint256"
+										}
+									},
+									"visibility": "internal"
+								},
+								{
+									"constant": false,
+									"id": 118,
+									"mutability": "mutable",
+									"name": "adminFees",
+									"nameLocation": "355:9:2",
+									"nodeType": "VariableDeclaration",
+									"scope": 121,
+									"src": "347:17:2",
+									"stateVariable": false,
+									"storageLocation": "default",
+									"typeDescriptions": {
+										"typeIdentifier": "t_uint256",
+										"typeString": "uint256"
+									},
+									"typeName": {
+										"id": 117,
+										"name": "uint256",
+										"nodeType": "ElementaryTypeName",
+										"src": "347:7:2",
+										"typeDescriptions": {
+											"typeIdentifier": "t_uint256",
+											"typeString": "uint256"
+										}
+									},
+									"visibility": "internal"
+								},
+								{
+									"constant": false,
+									"id": 120,
+									"mutability": "mutable",
+									"name": "holderFees",
+									"nameLocation": "378:10:2",
+									"nodeType": "VariableDeclaration",
+									"scope": 121,
+									"src": "370:18:2",
+									"stateVariable": false,
+									"storageLocation": "default",
+									"typeDescriptions": {
+										"typeIdentifier": "t_uint256",
+										"typeString": "uint256"
+									},
+									"typeName": {
+										"id": 119,
+										"name": "uint256",
+										"nodeType": "ElementaryTypeName",
+										"src": "370:7:2",
+										"typeDescriptions": {
+											"typeIdentifier": "t_uint256",
+											"typeString": "uint256"
+										}
+									},
+									"visibility": "internal"
+								}
+							],
+							"name": "LiquidityPool",
+							"nameLocation": "224:13:2",
+							"nodeType": "StructDefinition",
+							"scope": 122,
+							"src": "217:174:2",
+							"visibility": "public"
+						}
+					],
+					"src": "32:360:2"
+				},
+				"id": 2
+			},
+			"src/libraries/FeeDistributor.sol": {
+				"ast": {
+					"absolutePath": "src/libraries/FeeDistributor.sol",
+					"exportedSymbols": {
+						"FeeDistributor": [
+							166
+						],
+						"IERC20": [
+							77
+						],
+						"IERC20Metadata": [
+							103
+						],
+						"LiquidityPool": [
+							121
+						]
+					},
+					"id": 167,
+					"license": "MIT",
+					"nodeType": "SourceUnit",
+					"nodes": [
+						{
+							"id": 123,
+							"literals": [
+								"solidity",
+								"^",
+								"0.8",
+								".0"
+							],
+							"nodeType": "PragmaDirective",
+							"src": "32:23:3"
+						},
+						{
+							"absolutePath": "src/LiquidityPool.sol",
+							"file": "../LiquidityPool.sol",
+							"id": 124,
+							"nameLocation": "-1:-1:-1",
+							"nodeType": "ImportDirective",
+							"scope": 167,
+							"sourceUnit": 122,
+							"src": "57:30:3",
 							"symbolAliases": [],
 							"unitAlias": ""
 						},
 						{
 							"abstract": false,
-							"baseContracts": [
-								{
-									"baseName": {
-										"id": 108,
-										"name": "IERC20Metadata",
-										"nameLocations": [
-											"296:14:2"
-										],
-										"nodeType": "IdentifierPath",
-										"referencedDeclaration": 103,
-										"src": "296:14:2"
-									},
-									"id": 109,
-									"nodeType": "InheritanceSpecifier",
-									"src": "296:14:2"
-								}
-							],
-							"canonicalName": "TokenIface",
+							"baseContracts": [],
+							"canonicalName": "FeeDistributor",
 							"contractDependencies": [],
-							"contractKind": "interface",
+							"contractKind": "library",
 							"documentation": {
-								"id": 107,
+								"id": 125,
 								"nodeType": "StructuredDocumentation",
-								"src": "174:97:2",
-								"text": " @title TokenIface\n @dev Interface extending IERC20Metadata with a burnFrom function."
+								"src": "89:98:3",
+								"text": " @title FeeDistributor\n @dev Library for distributing fees between admins and holders."
 							},
-							"fullyImplemented": false,
-							"id": 118,
+							"fullyImplemented": true,
+							"id": 166,
 							"linearizedBaseContracts": [
-								118,
-								103,
-								77
+								166
 							],
-							"name": "TokenIface",
-							"nameLocation": "282:10:2",
+							"name": "FeeDistributor",
+							"nameLocation": "196:14:3",
 							"nodeType": "ContractDefinition",
 							"nodes": [
 								{
-									"documentation": {
-										"id": 110,
-										"nodeType": "StructuredDocumentation",
-										"src": "317:186:2",
-										"text": " @dev Burns a specific amount of tokens from a user.\n @param user The address from which tokens will be burned.\n @param amount The amount of tokens to burn."
+									"constant": true,
+									"functionSelector": "126082cf",
+									"id": 128,
+									"mutability": "constant",
+									"name": "BASIS_POINTS_DIVISOR",
+									"nameLocation": "241:20:3",
+									"nodeType": "VariableDeclaration",
+									"scope": 166,
+									"src": "217:52:3",
+									"stateVariable": true,
+									"storageLocation": "default",
+									"typeDescriptions": {
+										"typeIdentifier": "t_uint256",
+										"typeString": "uint256"
 									},
-									"functionSelector": "79cc6790",
-									"id": 117,
-									"implemented": false,
+									"typeName": {
+										"id": 126,
+										"name": "uint256",
+										"nodeType": "ElementaryTypeName",
+										"src": "217:7:3",
+										"typeDescriptions": {
+											"typeIdentifier": "t_uint256",
+											"typeString": "uint256"
+										}
+									},
+									"value": {
+										"hexValue": "3130303030",
+										"id": 127,
+										"isConstant": false,
+										"isLValue": false,
+										"isPure": true,
+										"kind": "number",
+										"lValueRequested": false,
+										"nodeType": "Literal",
+										"src": "264:5:3",
+										"typeDescriptions": {
+											"typeIdentifier": "t_rational_10000_by_1",
+											"typeString": "int_const 10000"
+										},
+										"value": "10000"
+									},
+									"visibility": "public"
+								},
+								{
+									"body": {
+										"id": 164,
+										"nodeType": "Block",
+										"src": "508:196:3",
+										"statements": [
+											{
+												"assignments": [
+													138
+												],
+												"declarations": [
+													{
+														"constant": false,
+														"id": 138,
+														"mutability": "mutable",
+														"name": "adminFee",
+														"nameLocation": "526:8:3",
+														"nodeType": "VariableDeclaration",
+														"scope": 164,
+														"src": "518:16:3",
+														"stateVariable": false,
+														"storageLocation": "default",
+														"typeDescriptions": {
+															"typeIdentifier": "t_uint256",
+															"typeString": "uint256"
+														},
+														"typeName": {
+															"id": 137,
+															"name": "uint256",
+															"nodeType": "ElementaryTypeName",
+															"src": "518:7:3",
+															"typeDescriptions": {
+																"typeIdentifier": "t_uint256",
+																"typeString": "uint256"
+															}
+														},
+														"visibility": "internal"
+													}
+												],
+												"id": 145,
+												"initialValue": {
+													"commonType": {
+														"typeIdentifier": "t_uint256",
+														"typeString": "uint256"
+													},
+													"id": 144,
+													"isConstant": false,
+													"isLValue": false,
+													"isPure": false,
+													"lValueRequested": false,
+													"leftExpression": {
+														"components": [
+															{
+																"commonType": {
+																	"typeIdentifier": "t_uint256",
+																	"typeString": "uint256"
+																},
+																"id": 141,
+																"isConstant": false,
+																"isLValue": false,
+																"isPure": false,
+																"lValueRequested": false,
+																"leftExpression": {
+																	"id": 139,
+																	"name": "fee",
+																	"nodeType": "Identifier",
+																	"overloadedDeclarations": [],
+																	"referencedDeclaration": 134,
+																	"src": "538:3:3",
+																	"typeDescriptions": {
+																		"typeIdentifier": "t_uint256",
+																		"typeString": "uint256"
+																	}
+																},
+																"nodeType": "BinaryOperation",
+																"operator": "*",
+																"rightExpression": {
+																	"hexValue": "35",
+																	"id": 140,
+																	"isConstant": false,
+																	"isLValue": false,
+																	"isPure": true,
+																	"kind": "number",
+																	"lValueRequested": false,
+																	"nodeType": "Literal",
+																	"src": "544:1:3",
+																	"typeDescriptions": {
+																		"typeIdentifier": "t_rational_5_by_1",
+																		"typeString": "int_const 5"
+																	},
+																	"value": "5"
+																},
+																"src": "538:7:3",
+																"typeDescriptions": {
+																	"typeIdentifier": "t_uint256",
+																	"typeString": "uint256"
+																}
+															}
+														],
+														"id": 142,
+														"isConstant": false,
+														"isInlineArray": false,
+														"isLValue": false,
+														"isPure": false,
+														"lValueRequested": false,
+														"nodeType": "TupleExpression",
+														"src": "537:9:3",
+														"typeDescriptions": {
+															"typeIdentifier": "t_uint256",
+															"typeString": "uint256"
+														}
+													},
+													"nodeType": "BinaryOperation",
+													"operator": "/",
+													"rightExpression": {
+														"id": 143,
+														"name": "BASIS_POINTS_DIVISOR",
+														"nodeType": "Identifier",
+														"overloadedDeclarations": [],
+														"referencedDeclaration": 128,
+														"src": "549:20:3",
+														"typeDescriptions": {
+															"typeIdentifier": "t_uint256",
+															"typeString": "uint256"
+														}
+													},
+													"src": "537:32:3",
+													"typeDescriptions": {
+														"typeIdentifier": "t_uint256",
+														"typeString": "uint256"
+													}
+												},
+												"nodeType": "VariableDeclarationStatement",
+												"src": "518:51:3"
+											},
+											{
+												"assignments": [
+													147
+												],
+												"declarations": [
+													{
+														"constant": false,
+														"id": 147,
+														"mutability": "mutable",
+														"name": "holderFee",
+														"nameLocation": "596:9:3",
+														"nodeType": "VariableDeclaration",
+														"scope": 164,
+														"src": "588:17:3",
+														"stateVariable": false,
+														"storageLocation": "default",
+														"typeDescriptions": {
+															"typeIdentifier": "t_uint256",
+															"typeString": "uint256"
+														},
+														"typeName": {
+															"id": 146,
+															"name": "uint256",
+															"nodeType": "ElementaryTypeName",
+															"src": "588:7:3",
+															"typeDescriptions": {
+																"typeIdentifier": "t_uint256",
+																"typeString": "uint256"
+															}
+														},
+														"visibility": "internal"
+													}
+												],
+												"id": 151,
+												"initialValue": {
+													"commonType": {
+														"typeIdentifier": "t_uint256",
+														"typeString": "uint256"
+													},
+													"id": 150,
+													"isConstant": false,
+													"isLValue": false,
+													"isPure": false,
+													"lValueRequested": false,
+													"leftExpression": {
+														"id": 148,
+														"name": "fee",
+														"nodeType": "Identifier",
+														"overloadedDeclarations": [],
+														"referencedDeclaration": 134,
+														"src": "608:3:3",
+														"typeDescriptions": {
+															"typeIdentifier": "t_uint256",
+															"typeString": "uint256"
+														}
+													},
+													"nodeType": "BinaryOperation",
+													"operator": "-",
+													"rightExpression": {
+														"id": 149,
+														"name": "adminFee",
+														"nodeType": "Identifier",
+														"overloadedDeclarations": [],
+														"referencedDeclaration": 138,
+														"src": "614:8:3",
+														"typeDescriptions": {
+															"typeIdentifier": "t_uint256",
+															"typeString": "uint256"
+														}
+													},
+													"src": "608:14:3",
+													"typeDescriptions": {
+														"typeIdentifier": "t_uint256",
+														"typeString": "uint256"
+													}
+												},
+												"nodeType": "VariableDeclarationStatement",
+												"src": "588:34:3"
+											},
+											{
+												"expression": {
+													"id": 156,
+													"isConstant": false,
+													"isLValue": false,
+													"isPure": false,
+													"lValueRequested": false,
+													"leftHandSide": {
+														"expression": {
+															"id": 152,
+															"name": "pool",
+															"nodeType": "Identifier",
+															"overloadedDeclarations": [],
+															"referencedDeclaration": 132,
+															"src": "633:4:3",
+															"typeDescriptions": {
+																"typeIdentifier": "t_struct$_LiquidityPool_$121_storage_ptr",
+																"typeString": "struct LiquidityPool storage pointer"
+															}
+														},
+														"id": 154,
+														"isConstant": false,
+														"isLValue": true,
+														"isPure": false,
+														"lValueRequested": true,
+														"memberLocation": "638:9:3",
+														"memberName": "adminFees",
+														"nodeType": "MemberAccess",
+														"referencedDeclaration": 118,
+														"src": "633:14:3",
+														"typeDescriptions": {
+															"typeIdentifier": "t_uint256",
+															"typeString": "uint256"
+														}
+													},
+													"nodeType": "Assignment",
+													"operator": "+=",
+													"rightHandSide": {
+														"id": 155,
+														"name": "adminFee",
+														"nodeType": "Identifier",
+														"overloadedDeclarations": [],
+														"referencedDeclaration": 138,
+														"src": "651:8:3",
+														"typeDescriptions": {
+															"typeIdentifier": "t_uint256",
+															"typeString": "uint256"
+														}
+													},
+													"src": "633:26:3",
+													"typeDescriptions": {
+														"typeIdentifier": "t_uint256",
+														"typeString": "uint256"
+													}
+												},
+												"id": 157,
+												"nodeType": "ExpressionStatement",
+												"src": "633:26:3"
+											},
+											{
+												"expression": {
+													"id": 162,
+													"isConstant": false,
+													"isLValue": false,
+													"isPure": false,
+													"lValueRequested": false,
+													"leftHandSide": {
+														"expression": {
+															"id": 158,
+															"name": "pool",
+															"nodeType": "Identifier",
+															"overloadedDeclarations": [],
+															"referencedDeclaration": 132,
+															"src": "669:4:3",
+															"typeDescriptions": {
+																"typeIdentifier": "t_struct$_LiquidityPool_$121_storage_ptr",
+																"typeString": "struct LiquidityPool storage pointer"
+															}
+														},
+														"id": 160,
+														"isConstant": false,
+														"isLValue": true,
+														"isPure": false,
+														"lValueRequested": true,
+														"memberLocation": "674:10:3",
+														"memberName": "holderFees",
+														"nodeType": "MemberAccess",
+														"referencedDeclaration": 120,
+														"src": "669:15:3",
+														"typeDescriptions": {
+															"typeIdentifier": "t_uint256",
+															"typeString": "uint256"
+														}
+													},
+													"nodeType": "Assignment",
+													"operator": "+=",
+													"rightHandSide": {
+														"id": 161,
+														"name": "holderFee",
+														"nodeType": "Identifier",
+														"overloadedDeclarations": [],
+														"referencedDeclaration": 147,
+														"src": "688:9:3",
+														"typeDescriptions": {
+															"typeIdentifier": "t_uint256",
+															"typeString": "uint256"
+														}
+													},
+													"src": "669:28:3",
+													"typeDescriptions": {
+														"typeIdentifier": "t_uint256",
+														"typeString": "uint256"
+													}
+												},
+												"id": 163,
+												"nodeType": "ExpressionStatement",
+												"src": "669:28:3"
+											}
+										]
+									},
+									"documentation": {
+										"id": 129,
+										"nodeType": "StructuredDocumentation",
+										"src": "276:153:3",
+										"text": " @dev Distributes fees between admin and holders.\n @param pool The liquidity pool.\n @param fee The total fee to distribute."
+									},
+									"id": 165,
+									"implemented": true,
 									"kind": "function",
 									"modifiers": [],
-									"name": "burnFrom",
-									"nameLocation": "517:8:2",
+									"name": "distributeFees",
+									"nameLocation": "443:14:3",
 									"nodeType": "FunctionDefinition",
 									"parameters": {
-										"id": 115,
+										"id": 135,
 										"nodeType": "ParameterList",
 										"parameters": [
 											{
 												"constant": false,
-												"id": 112,
+												"id": 132,
 												"mutability": "mutable",
-												"name": "user",
-												"nameLocation": "534:4:2",
+												"name": "pool",
+												"nameLocation": "480:4:3",
 												"nodeType": "VariableDeclaration",
-												"scope": 117,
-												"src": "526:12:2",
+												"scope": 165,
+												"src": "458:26:3",
 												"stateVariable": false,
-												"storageLocation": "default",
+												"storageLocation": "storage",
 												"typeDescriptions": {
-													"typeIdentifier": "t_address",
-													"typeString": "address"
+													"typeIdentifier": "t_struct$_LiquidityPool_$121_storage_ptr",
+													"typeString": "struct LiquidityPool"
 												},
 												"typeName": {
-													"id": 111,
-													"name": "address",
-													"nodeType": "ElementaryTypeName",
-													"src": "526:7:2",
-													"stateMutability": "nonpayable",
+													"id": 131,
+													"nodeType": "UserDefinedTypeName",
+													"pathNode": {
+														"id": 130,
+														"name": "LiquidityPool",
+														"nameLocations": [
+															"458:13:3"
+														],
+														"nodeType": "IdentifierPath",
+														"referencedDeclaration": 121,
+														"src": "458:13:3"
+													},
+													"referencedDeclaration": 121,
+													"src": "458:13:3",
 													"typeDescriptions": {
-														"typeIdentifier": "t_address",
-														"typeString": "address"
+														"typeIdentifier": "t_struct$_LiquidityPool_$121_storage_ptr",
+														"typeString": "struct LiquidityPool"
 													}
 												},
 												"visibility": "internal"
 											},
 											{
 												"constant": false,
-												"id": 114,
+												"id": 134,
 												"mutability": "mutable",
-												"name": "amount",
-												"nameLocation": "548:6:2",
+												"name": "fee",
+												"nameLocation": "494:3:3",
 												"nodeType": "VariableDeclaration",
-												"scope": 117,
-												"src": "540:14:2",
+												"scope": 165,
+												"src": "486:11:3",
 												"stateVariable": false,
 												"storageLocation": "default",
 												"typeDescriptions": {
@@ -2320,10 +3357,10 @@
 													"typeString": "uint256"
 												},
 												"typeName": {
-													"id": 113,
+													"id": 133,
 													"name": "uint256",
 													"nodeType": "ElementaryTypeName",
-													"src": "540:7:2",
+													"src": "486:7:3",
 													"typeDescriptions": {
 														"typeIdentifier": "t_uint256",
 														"typeString": "uint256"
@@ -2332,33 +3369,30 @@
 												"visibility": "internal"
 											}
 										],
-										"src": "525:30:2"
+										"src": "457:41:3"
 									},
 									"returnParameters": {
-										"id": 116,
+										"id": 136,
 										"nodeType": "ParameterList",
 										"parameters": [],
-										"src": "564:0:2"
+										"src": "508:0:3"
 									},
-									"scope": 118,
-									"src": "508:57:2",
+									"scope": 166,
+									"src": "434:270:3",
 									"stateMutability": "nonpayable",
 									"virtual": false,
-									"visibility": "external"
+									"visibility": "internal"
 								}
 							],
-							"scope": 119,
-							"src": "272:295:2",
+							"scope": 167,
+							"src": "188:518:3",
 							"usedErrors": [],
-							"usedEvents": [
-								11,
-								20
-							]
+							"usedEvents": []
 						}
 					],
-					"src": "72:496:2"
+					"src": "32:675:3"
 				},
-				"id": 2
+				"id": 3
 			}
 		}
 	}

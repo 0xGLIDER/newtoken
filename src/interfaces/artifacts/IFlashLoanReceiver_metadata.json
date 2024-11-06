@@ -53,7 +53,7 @@
 	},
 	"settings": {
 		"compilationTarget": {
-			"src/interfaces/IFlashLoanReceiver.sol": "IFlashLoanReceiver"
+			"src/interfaces/IFlashLoanReciever1.sol": "IFlashLoanReceiver"
 		},
 		"evmVersion": "cancun",
 		"libraries": {},
@@ -61,7 +61,7 @@
 			"bytecodeHash": "ipfs"
 		},
 		"optimizer": {
-			"enabled": false,
+			"enabled": true,
 			"runs": 200
 		},
 		"remappings": [
@@ -73,12 +73,12 @@
 		]
 	},
 	"sources": {
-		"src/interfaces/IFlashLoanReceiver.sol": {
-			"keccak256": "0x878dc6e826682d4d83da831d9aa343500d8b6d59279b24879870e80809fbca4a",
+		"src/interfaces/IFlashLoanReciever1.sol": {
+			"keccak256": "0x3915729516c14c31713ae804aa59dd22b70894445638d885b4324556240a33a9",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://5bfebb1e626c3b8987e1d6422d0b013c17701af675a2a4501819c7ae93073ff6",
-				"dweb:/ipfs/QmSJXskVQWcixnvJX4MFcEoorpsDu4fGtsjwUhAH5RzvCH"
+				"bzz-raw://ffeb6368e205e1c1b3c777d87b5cf0b436d795d230b8007fed9f38f6a5fe18f7",
+				"dweb:/ipfs/QmcKnhNV39kATSQ9W3UaApay1D28DbVWDYYQXVrNDZy9ws"
 			]
 		}
 	},

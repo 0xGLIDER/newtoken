@@ -1,11 +1,10 @@
-// contracts/SuperToken2.sol
+// contracts/SuperToken3.sol
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
 // Import OpenZeppelin Contracts
-import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 // Import Libraries
@@ -24,13 +23,14 @@ import "./interfaces/IFlashLoanReceiver2.sol";
 
 // Import LPToken interface
 import "./LPToken.sol";
+import "./SuperTokenLPFactory.sol";
 
 /**
- * @title SuperToken2
+ * @title SuperToken3
  * @dev A token representing a basket of underlying tokens with integrated lending and flash loan functionality.
  *      Similar to Uniswap V2 Liquidity Tokens, users can deposit multiple tokens to mint a single SuperToken.
  */
-contract SuperToken3 is Initializable, ReentrancyGuardUpgradeable, AccessControlUpgradeable {
+contract SuperToken3 is ReentrancyGuard, AccessControl {
     using SafeERC20 for IERC20Metadata;
     using FeeCalculator for LoanTerms;
     using FeeDistributor for LiquidityPool;
@@ -67,13 +67,19 @@ contract SuperToken3 is Initializable, ReentrancyGuardUpgradeable, AccessControl
     uint256 public BLOCKS_IN_A_YEAR;
     uint256 public COLLATERALIZATION_RATIO; // e.g., 150 for 150%
 
-    // **New State Variable**: Required amounts per SuperToken for each underlying token
+    // Required amounts per SuperToken for each underlying token
     uint256[] public requiredAmountsPerSuperToken;
 
-    // **New State Variable**: LPToken contract
+    // LPToken contract
     LPToken public lpToken;
 
+    // LPToken Factory
+    SuperTokenLPFactory public lpFactory;
+
     // Events
+    event PoolInitialized(address indexed initializer, address lpTokenAddress);
+    event RequiredAmountsSet(uint256[] requiredAmounts);
+    event LPTokenSet(address lpTokenAddress);
     event Deposit(address indexed user, uint256[] amounts, uint256 superAmount);
     event Redeem(address indexed user, uint256 superAmount, uint256[] amounts);
     event Borrowed(address indexed user, address indexed token, uint256 amount, uint256 collateral);
@@ -82,24 +88,21 @@ contract SuperToken3 is Initializable, ReentrancyGuardUpgradeable, AccessControl
     event AdminFeesWithdrawn(address indexed admin, address indexed token, uint256 amount);
     event FlashLoan(address indexed receiver, address indexed token, uint256 amount, uint256 fee);
     event FeesClaimed(address indexed holder, address indexed token, uint256 amount);
-    event PoolInitialized(address indexed initializer, address[] tokens);
-    event RequiredAmountsSet(uint256[] requiredAmounts); // **New Event**
-    event LPTokenSet(address lpTokenAddress); // **New Event**
 
-    // Initialization
-    function initialize(
+    constructor(
         IERC20Metadata[] memory _underlyingTokens,
         IEqualFiToken _token,
-        address admin,
-        uint256 _collateralizationRatio, // New parameter
-        uint256[] memory _requiredAmountsPerSuperToken, // **New Parameter**
-        address _lpTokenAddress // **New Parameter**
-    ) public initializer {
-        __ReentrancyGuard_init();
-        __AccessControl_init();
+        SuperTokenLPFactory _lpFactory,
+        uint256 _collateralizationRatio,
+        uint256[] memory _requiredAmountsPerSuperToken
+    ) {
+        require(_underlyingTokens.length >= 2 && _underlyingTokens.length <= 10, "SuperToken3: invalid number of underlying tokens");
+        require(_requiredAmountsPerSuperToken.length == _underlyingTokens.length, "SuperToken3: required amounts length mismatch");
+        require(address(_lpFactory) != address(0), "SuperToken3: LPFactory address cannot be zero");
 
-        require(_underlyingTokens.length >= 2 && _underlyingTokens.length <= 10, "SuperToken2: invalid number of underlying tokens");
-        require(_requiredAmountsPerSuperToken.length == _underlyingTokens.length, "SuperToken2: required amounts length mismatch");
+        // Initialize AccessControl
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _grantRole(ADMIN_ROLE, msg.sender);
 
         for (uint256 i = 0; i < _underlyingTokens.length; i++) {
             address tokenAddr = address(_underlyingTokens[i]);
@@ -112,7 +115,7 @@ contract SuperToken3 is Initializable, ReentrancyGuardUpgradeable, AccessControl
                 holderFees: 0
             });
             underlyingTokens.push(_underlyingTokens[i]);
-            requiredAmountsPerSuperToken.push(_requiredAmountsPerSuperToken[i]); // **Store Required Amounts**
+            requiredAmountsPerSuperToken.push(_requiredAmountsPerSuperToken[i]); // Store Required Amounts
         }
 
         token = _token;
@@ -131,16 +134,39 @@ contract SuperToken3 is Initializable, ReentrancyGuardUpgradeable, AccessControl
         // Set flash loan fee
         FLASHLOAN_FEE_BPS = 5; // 0.05%
 
-        _grantRole(DEFAULT_ADMIN_ROLE, admin);
-        _grantRole(ADMIN_ROLE, admin);
+        // Set LPToken factory
+        lpFactory = _lpFactory;
 
-        // Set LPToken contract
-        lpToken = LPToken(_lpTokenAddress);
-        require(address(lpToken) != address(0), "SuperToken2: LPToken address cannot be zero");
+        emit PoolInitialized(msg.sender, address(0)); // LPToken not set yet
+        emit RequiredAmountsSet(_requiredAmountsPerSuperToken);
+    }
 
-        emit PoolInitialized(msg.sender, getUnderlyingTokens());
-        emit RequiredAmountsSet(_requiredAmountsPerSuperToken); // **Emit Event**
-        emit LPTokenSet(_lpTokenAddress); // **Emit Event**
+    // ========================== Initialize Pool Function ==========================
+
+    /**
+     * @dev Initializes the pool by creating the LPToken via the LPFactory.
+     *      Only callable once by an admin.
+     * @param name Name of the LPToken.
+     * @param symbol Symbol of the LPToken.
+     * @param adminAddress Address to be granted DEFAULT_ADMIN_ROLE on LPToken.
+     */
+    function initializePool(string memory name, string memory symbol, address adminAddress) external onlyRole(ADMIN_ROLE) {
+        require(address(lpToken) == address(0), "SuperToken3: LPToken already set");
+        require(adminAddress != address(0), "SuperToken3: admin address cannot be zero");
+
+        // Use the LPFactory to create the LPToken
+        lpToken = lpFactory.createLPToken(name, symbol, address(this));
+        require(address(lpToken) != address(0), "SuperToken3: LPToken creation failed");
+
+        // Grant roles to SuperToken3
+        lpToken.grantRole(lpToken.MINTER_ROLE(), address(this));
+        lpToken.grantRole(lpToken.BURNER_ROLE(), address(this));
+
+        // Grant DEFAULT_ADMIN_ROLE to the specified admin
+        lpToken.grantRole(lpToken.DEFAULT_ADMIN_ROLE(), adminAddress);
+
+        emit LPTokenSet(address(lpToken));
+        emit PoolInitialized(msg.sender, address(lpToken));
     }
 
     // ========================== Deposit Function ==========================
@@ -150,21 +176,22 @@ contract SuperToken3 is Initializable, ReentrancyGuardUpgradeable, AccessControl
      * @param amounts Array of amounts for each underlying token to deposit.
      */
     function deposit(uint256[] calldata amounts) external nonReentrant {
-        require(amounts.length == underlyingTokens.length, "SuperToken2: amounts length mismatch");
-        require(requiredAmountsPerSuperToken.length == underlyingTokens.length, "SuperToken2: required amounts length mismatch");
+        require(address(lpToken) != address(0), "SuperToken3: LPToken not set");
+        require(amounts.length == underlyingTokens.length, "SuperToken3: amounts length mismatch");
+        require(requiredAmountsPerSuperToken.length == underlyingTokens.length, "SuperToken3: required amounts length mismatch");
 
         uint256 mintAmount = type(uint256).max; // Initialize to max for min calculation
 
         // Determine the number of SuperTokens to mint based on the smallest ratio
         for (uint256 i = 0; i < underlyingTokens.length; i++) {
-            require(amounts[i] >= requiredAmountsPerSuperToken[i], "SuperToken2: insufficient deposit for token");
+            require(amounts[i] >= requiredAmountsPerSuperToken[i], "SuperToken3: insufficient deposit for token");
             uint256 possibleMint = amounts[i] / requiredAmountsPerSuperToken[i];
             if (possibleMint < mintAmount) {
                 mintAmount = possibleMint;
             }
         }
 
-        require(mintAmount > 0, "SuperToken2: deposit amounts too low to mint any SuperTokens");
+        require(mintAmount > 0, "SuperToken3: deposit amounts too low to mint any SuperTokens");
 
         // Calculate total required amounts based on mintAmount
         uint256[] memory requiredDeposits = new uint256[](underlyingTokens.length);
@@ -186,9 +213,11 @@ contract SuperToken3 is Initializable, ReentrancyGuardUpgradeable, AccessControl
     // ========================== Redeem Function ==========================
 
     function redeem(uint256 superAmount) external nonReentrant {
-        require(superAmount > 0, "SuperToken2: zero redeem amount");
+        require(superAmount > 0, "SuperToken3: zero redeem amount");
+        require(address(lpToken) != address(0), "SuperToken3: LPToken not set");
+
         uint256 initialHolderBal = lpToken.balanceOf(msg.sender);
-        require(initialHolderBal >= superAmount, "SuperToken2: insufficient LP token balance");
+        require(initialHolderBal >= superAmount, "SuperToken3: insufficient LP token balance");
 
         uint256 supply = lpToken.totalSupply();
         uint256 share = (superAmount * 1e18) / supply;
@@ -208,7 +237,7 @@ contract SuperToken3 is Initializable, ReentrancyGuardUpgradeable, AccessControl
 
             // Calculate deposit amount to return
             uint256 depositAmt = (availableDeposits * share) / 1e18;
-            require(depositAmt <= availableDeposits, "SuperToken2: insufficient available deposits");
+            require(depositAmt <= availableDeposits, "SuperToken3: insufficient available deposits");
             pool.totalDeposits -= depositAmt;
 
             // Calculate fee amount to return
@@ -220,7 +249,7 @@ contract SuperToken3 is Initializable, ReentrancyGuardUpgradeable, AccessControl
 
             // Transfer combined amount
             uint256 totalAmt = depositAmt + feeAmt;
-            require(tokenContract.balanceOf(address(this)) >= totalAmt, "SuperToken2: insufficient contract balance");
+            require(tokenContract.balanceOf(address(this)) >= totalAmt, "SuperToken3: insufficient contract balance");
             tokenContract.safeTransfer(msg.sender, totalAmt);
 
             amountsToReturn[i] = totalAmt;
@@ -229,18 +258,16 @@ contract SuperToken3 is Initializable, ReentrancyGuardUpgradeable, AccessControl
         emit Redeem(msg.sender, superAmount, amountsToReturn);
     }
 
-
-
-
     // ========================== Borrow Function ==========================
 
     function borrow(address tokenAddress, uint256 amount, LoanType loanType) external nonReentrant {
-        require(amount > 0, "SuperToken2: zero borrow amount");
-        require(loans[msg.sender].amount == 0, "SuperToken2: active loan exists");
+        require(amount > 0, "SuperToken3: zero borrow amount");
+        require(loans[msg.sender].amount == 0, "SuperToken3: active loan exists");
+        require(address(lpToken) != address(0), "SuperToken3: LPToken not set");
 
         LiquidityPool storage pool = liquidityPools[tokenAddress];
-        require(address(pool.token) != address(0), "SuperToken2: invalid token");
-        require(pool.totalDeposits - pool.totalBorrowed >= amount, "SuperToken2: insufficient liquidity");
+        require(address(pool.token) != address(0), "SuperToken3: invalid token");
+        require(pool.totalDeposits - pool.totalBorrowed >= amount, "SuperToken3: insufficient liquidity");
 
         uint256 collateral = (amount * COLLATERALIZATION_RATIO) / 100;
         pool.token.safeTransferFrom(msg.sender, address(this), collateral);
@@ -260,49 +287,18 @@ contract SuperToken3 is Initializable, ReentrancyGuardUpgradeable, AccessControl
         emit Borrowed(msg.sender, tokenAddress, amount, collateral);
     }
 
-
     // ========================== Repay Function ==========================
-
-    /**
-     * @dev Allows borrowers to repay their loans and reclaim their collateral.
-     */
-    /**unction repay() external nonReentrant {
-        Loan storage loan = loans[msg.sender];
-        require(loan.amount > 0, "SuperToken2: no active loan");
-
-        LiquidityPool storage pool = liquidityPools[loan.tokenAddress];
-        require(address(pool.token) != address(0), "SuperToken2: invalid token");
-
-        uint256 fee = calculateFee(loan.amount, loan.loanType);
-
-        // Borrower repays the loan amount plus fee
-        uint256 repaymentAmount = loan.amount + fee;
-        pool.token.safeTransferFrom(msg.sender, address(this), repaymentAmount);
-
-        pool.totalBorrowed -= loan.amount;
-        pool.totalFees += fee;
-
-        // Distribute the collected fee
-        pool.distributeFees(fee);
-
-        // Return collateral
-        pool.token.safeTransfer(msg.sender, loan.collateral);
-
-        delete loans[msg.sender];
-
-        emit Repaid(msg.sender, loan.tokenAddress, loan.amount, loan.collateral, fee);
-    }**/
 
     function repay() external nonReentrant {
         Loan storage loan = loans[msg.sender];
-        require(loan.amount > 0, "No active loan");
+        require(loan.amount > 0, "SuperToken3: no active loan");
 
         LiquidityPool storage pool = liquidityPools[loan.tokenAddress];
-        require(address(pool.token) != address(0), "Invalid token");
+        require(address(pool.token) != address(0), "SuperToken3: invalid token");
 
         uint256 fee = calculateFee(loan.amount, loan.loanType);
         uint256 totalDue = loan.amount + fee;
-        require(loan.collateral >= totalDue, "Insufficient collateral to cover loan and fee");
+        require(loan.collateral >= totalDue, "SuperToken3: fee exceeds collateral");
 
         // Deduct loan amount and fee from collateral
         uint256 netCollateralReturn = loan.collateral - totalDue;
@@ -312,7 +308,6 @@ contract SuperToken3 is Initializable, ReentrancyGuardUpgradeable, AccessControl
         pool.totalFees += fee;
         pool.distributeFees(fee);
 
-       
         // Return net collateral to borrower
         if (netCollateralReturn > 0) {
             pool.token.safeTransfer(msg.sender, netCollateralReturn);
@@ -324,29 +319,27 @@ contract SuperToken3 is Initializable, ReentrancyGuardUpgradeable, AccessControl
         emit Repaid(msg.sender, loan.tokenAddress, loan.amount, netCollateralReturn, fee);
     }
 
-
-
     // ========================== Force Repayment Function ==========================
 
     /**
      * @dev Allows admins to force repay a user's loan after the loan duration has expired.
-     *      The fee is split between admin and holders.
+     *      The fee is split between admin fees and holders.
      * @param borrower The address of the borrower whose loan is to be forcefully repaid.
      */
     function forceRepayment(address borrower) external onlyRole(ADMIN_ROLE) nonReentrant {
         Loan storage loan = loans[borrower];
-        require(loan.amount > 0, "SuperToken2: no active loan");
+        require(loan.amount > 0, "SuperToken3: no active loan");
 
         LiquidityPool storage pool = liquidityPools[loan.tokenAddress];
-        require(address(pool.token) != address(0), "SuperToken2: invalid token");
+        require(address(pool.token) != address(0), "SuperToken3: invalid token");
 
         LoanType loanType = loan.loanType;
         LoanTerms memory terms = loanTerms[loanType];
 
-        require(block.number >= loan.borrowBlock + terms.durationInBlocks, "SuperToken2: loan not expired");
+        require(block.number >= loan.borrowBlock + terms.durationInBlocks, "SuperToken3: loan not expired");
 
         uint256 fee = calculateFee(loan.amount, loanType);
-        require(fee <= loan.collateral, "SuperToken2: fee exceeds collateral");
+        require(fee <= loan.collateral, "SuperToken3: fee exceeds collateral");
 
         pool.totalBorrowed -= loan.amount;
         pool.totalFees += fee;
@@ -361,7 +354,6 @@ contract SuperToken3 is Initializable, ReentrancyGuardUpgradeable, AccessControl
 
         emit ForcedRepayment(borrower, loan.tokenAddress, loan.amount, collateralReturn);
     }
-
 
     // ========================== Flash Loan Function ==========================
 
@@ -379,10 +371,12 @@ contract SuperToken3 is Initializable, ReentrancyGuardUpgradeable, AccessControl
         address receiver,
         bytes calldata params
     ) external nonReentrant {
-        require(amount > 0, "SuperToken2: zero flash loan amount");
+        require(address(lpToken) != address(0), "SuperToken3: LPToken not set");
+        require(amount > 0, "SuperToken3: zero flash loan amount");
+
         LiquidityPool storage pool = liquidityPools[tokenAddress];
-        require(address(pool.token) != address(0), "SuperToken2: invalid token");
-        require(pool.totalDeposits - pool.totalBorrowed >= amount, "SuperToken2: insufficient liquidity");
+        require(address(pool.token) != address(0), "SuperToken3: invalid token");
+        require(pool.totalDeposits - pool.totalBorrowed >= amount, "SuperToken3: insufficient liquidity");
 
         uint256 fee = (amount * FLASHLOAN_FEE_BPS) / BASIS_POINTS_DIVISOR;
         uint256 repaymentAmount = amount + fee;
@@ -394,7 +388,7 @@ contract SuperToken3 is Initializable, ReentrancyGuardUpgradeable, AccessControl
         IFlashLoanReceiver2(receiver).executeOperation(tokenAddress, amount, fee, msg.sender, params);
 
         uint256 balanceAfter = pool.token.balanceOf(address(this));
-        require(balanceAfter >= balanceBefore + fee, "SuperToken2: flash loan not repaid");
+        require(balanceAfter >= balanceBefore + fee, "SuperToken3: flash loan not repaid");
 
         // Now that the fee has been repaid, account for it
         pool.totalFees += fee;
@@ -411,8 +405,8 @@ contract SuperToken3 is Initializable, ReentrancyGuardUpgradeable, AccessControl
      */
     function withdrawAdminFees(address tokenAddress) external onlyRole(ADMIN_ROLE) nonReentrant {
         LiquidityPool storage pool = liquidityPools[tokenAddress];
-        require(address(pool.token) != address(0), "SuperToken2: invalid token");
-        require(pool.adminFees > 0, "SuperToken2: no admin fees");
+        require(address(pool.token) != address(0), "SuperToken3: invalid token");
+        require(pool.adminFees > 0, "SuperToken3: no admin fees");
 
         uint256 amt = pool.adminFees;
         pool.adminFees = 0;
@@ -440,7 +434,7 @@ contract SuperToken3 is Initializable, ReentrancyGuardUpgradeable, AccessControl
      * @param newFeeBps The new flash loan fee in basis points.
      */
     function setFlashLoanFeeBPS(uint256 newFeeBps) external onlyRole(ADMIN_ROLE) {
-        require(newFeeBps <= BASIS_POINTS_DIVISOR, "SuperToken2: invalid fee");
+        require(newFeeBps <= BASIS_POINTS_DIVISOR, "SuperToken3: invalid fee");
         FLASHLOAN_FEE_BPS = newFeeBps;
         // Optionally emit an event
     }
@@ -504,10 +498,10 @@ contract SuperToken3 is Initializable, ReentrancyGuardUpgradeable, AccessControl
     // ========================== Fallback and Receive ==========================
 
     fallback() external payable {
-        revert("SuperToken2: cannot accept ETH");
+        revert("SuperToken3: cannot accept ETH");
     }
 
     receive() external payable {
-        revert("SuperToken2: cannot accept ETH");
+        revert("SuperToken3: cannot accept ETH");
     }
 }

@@ -10,7 +10,7 @@ import "./interfaces/ITokenIface.sol";
 import "./interfaces/IFlashLoanReceiver1.sol";
 
 // Import Custom Contracts
-import "./LPToken.sol";          // Custom ERC20 LP Token with Mint/Burn functionality
+//import "./LPToken.sol";          // Custom ERC20 LP Token with Mint/Burn functionality
 import "./EqualFiLPFactory.sol";     // Factory to create ERC20 tokens
 
 /**

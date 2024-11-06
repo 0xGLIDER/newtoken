@@ -304,7 +304,7 @@
 	},
 	"settings": {
 		"compilationTarget": {
-			"src/interfaces/ITokenSwap.sol": "TokenIface"
+			"src/interfaces/ITokenIface.sol": "TokenIface"
 		},
 		"evmVersion": "cancun",
 		"libraries": {},
@@ -312,7 +312,7 @@
 			"bytecodeHash": "ipfs"
 		},
 		"optimizer": {
-			"enabled": false,
+			"enabled": true,
 			"runs": 200
 		},
 		"remappings": [
@@ -340,12 +340,12 @@
 				"dweb:/ipfs/QmeN5jKMN2vw5bhacr6tkg78afbTTZUeaacNHqjWt4Ew1r"
 			]
 		},
-		"src/interfaces/ITokenSwap.sol": {
-			"keccak256": "0x5346e22937f725e569010a876d267eeeac7a718663f581721750a8a378209bfa",
+		"src/interfaces/ITokenIface.sol": {
+			"keccak256": "0xca592daf2ac640ba9052b8d8754da69677ee7439b33eba8e503a4960d71c2ab8",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://2dcf71606d69eacd85c6acf6c31a70cddfa78db50f1175512375b9f9cbdee237",
-				"dweb:/ipfs/QmdQ5Z1jwqneSMFDTLgERs7PZVSmu5xkzdmGxTLmwetH7c"
+				"bzz-raw://e0d244ded8af2f8c677971643fb4ebe30efc5970064db683b5ac063b90dbbaa9",
+				"dweb:/ipfs/QmVyZgGnAgx9WGQ7btLoN43qPcDAGdRSM6V8SbjunQCQj9"
 			]
 		}
 	},
