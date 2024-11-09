@@ -16,7 +16,7 @@ library FeeDistributor {
      * @param fee The total fee to distribute.
      */
     function distributeFees(LiquidityPool storage pool, uint256 fee) internal {
-        uint256 adminFee = (fee * 5) / BASIS_POINTS_DIVISOR; // 0.05%
+        uint256 adminFee = (fee * 50) / BASIS_POINTS_DIVISOR; // 0.50%
         uint256 holderFee = fee - adminFee;
 
         pool.adminFees += adminFee;

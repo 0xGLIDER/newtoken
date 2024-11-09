@@ -5,7 +5,7 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
 // Import the SuperToken3 contract
-import "./SuperToken4.sol";
+import "./SuperToken6.sol";
 
 /**
  * @title SuperToken3Factory
@@ -13,7 +13,7 @@ import "./SuperToken4.sol";
  */
 contract SuperToken3Factory {
     // Array to keep track of deployed SuperToken3 instances
-    SuperToken3[] public deployedSuperTokens;
+    SuperToken5[] public deployedSuperTokens;
 
     // Event emitted when a new SuperToken3 is deployed
     event SuperToken3Deployed(address indexed superToken3Address);
@@ -38,10 +38,11 @@ contract SuperToken3Factory {
         uint256[] memory _requiredAmountsPerSuperToken,
         string memory poolName,
         string memory poolSymbol,
+        IERC721 nft,
         address adminAddress
     ) public returns (address) {
         // Deploy new SuperToken3 instance
-        SuperToken3 superToken = new SuperToken3(
+        SuperToken5 superToken = new SuperToken5(
             _underlyingTokens,
             _token,
             _lpFactory,
@@ -50,7 +51,7 @@ contract SuperToken3Factory {
         );
 
         // Initialize the pool
-        superToken.initializePool(poolName, poolSymbol, adminAddress);
+        superToken.initializePool(poolName, poolSymbol, adminAddress, nft);
 
         // Transfer roles to the specified adminAddress
         superToken.grantRole(superToken.DEFAULT_ADMIN_ROLE(), adminAddress);
