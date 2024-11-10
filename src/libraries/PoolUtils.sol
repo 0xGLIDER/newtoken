@@ -1,8 +1,8 @@
+// contracts/libraries/PoolUtils.sol
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
 import "../LiquidityPool.sol";
-import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 /**
  * @title PoolUtils
@@ -10,29 +10,27 @@ import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
  */
 library PoolUtils {
     /**
-     * @dev Calculates the total deposits across all pools.
-     * @param tokens The array of underlying token contracts.
-     * @param pools The mapping of liquidity pools.
-     * @return total The total deposits.
+     * @dev Calculates the total pool deposits across all underlying tokens.
+     * @param tokens Array of underlying token contracts.
+     * @param liquidityPools Mapping of token addresses to their respective liquidity pools.
+     * @return totalDeposits The total deposits across all pools.
      */
-    function getTotalPoolDeposits(
-        IERC20Metadata[] memory tokens,
-        mapping(address => LiquidityPool) storage pools
-    ) internal view returns (uint256 total) {
+    function getTotalPoolDeposits(IERC20Metadata[] storage tokens, mapping(address => LiquidityPool) storage liquidityPools) internal view returns (uint256 totalDeposits) {
         for (uint256 i = 0; i < tokens.length; i++) {
-            total += pools[address(tokens[i])].totalDeposits;
+            LiquidityPool storage pool = liquidityPools[address(tokens[i])];
+            totalDeposits += pool.totalDeposits;
         }
     }
 
     /**
      * @dev Retrieves the underlying token addresses.
-     * @param tokens The array of underlying token contracts.
-     * @return addresses The array of token addresses.
+     * @param tokens Array of underlying token contracts.
+     * @return tokensList Array of underlying token addresses.
      */
-    function getUnderlyingTokens(IERC20Metadata[] memory tokens) internal pure returns (address[] memory addresses) {
-        addresses = new address[](tokens.length);
+    function getUnderlyingTokens(IERC20Metadata[] storage tokens) internal view returns (address[] memory tokensList) {
+        tokensList = new address[](tokens.length);
         for (uint256 i = 0; i < tokens.length; i++) {
-            addresses[i] = address(tokens[i]);
+            tokensList[i] = address(tokens[i]);
         }
     }
 }

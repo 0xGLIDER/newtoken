@@ -1,35 +1,39 @@
-// contracts/libraries/FeeCalculator2.sol
+// contracts/libraries/FeeCalculator3.sol
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "../Types.sol";
-
-library FeeCalculator2 {
+/**
+ * @title FeeCalculator3
+ * @dev Library for calculating time-based fees for loans.
+ */
+library FeeCalculator3 {
     /**
      * @dev Calculates the time-based fee for a loan.
-     * @param amount The principal amount of the loan.
-     * @param borrowBlock The block number when the loan was taken.
-     * @param currentBlock The current block number.
-     * @param blocksInYear Total number of blocks in a year.
+     * @param amount The principal amount borrowed.
+     * @param blocksElapsed The number of blocks elapsed since the loan was taken.
+     * @param blocksInYear The total number of blocks in a year.
      * @param minimumFeeBps The minimum fee in basis points.
      * @param basisPointsDivisor The divisor for basis points calculations.
-     * @param apyBps The specific APY for this loan.
+     * @param apyBps The annual percentage yield in basis points.
      * @return fee The calculated fee.
      */
     function calculateTimeBasedFee(
         uint256 amount,
-        uint256 borrowBlock,
-        uint256 currentBlock,
+        uint256 blocksElapsed,
         uint256 blocksInYear,
         uint256 minimumFeeBps,
         uint256 basisPointsDivisor,
         uint256 apyBps
     ) internal pure returns (uint256 fee) {
-        uint256 blocksElapsed = currentBlock > borrowBlock ? currentBlock - borrowBlock : 0;
-        uint256 feeBps = (apyBps * blocksElapsed) / blocksInYear;
-        if (feeBps < minimumFeeBps) {
-            feeBps = minimumFeeBps;
+        require(blocksElapsed >= 0, "FeeCalculator3: blocksElapsed cannot be negative");
+
+        // Calculate the proportional fee based on blocks elapsed and APY
+        fee = (amount * apyBps * blocksElapsed) / (blocksInYear * basisPointsDivisor);
+        
+        // Ensure the fee is at least the minimum fee
+        uint256 minimumFee = (amount * minimumFeeBps) / basisPointsDivisor;
+        if (fee < minimumFee) {
+            fee = minimumFee;
         }
-        fee = (amount * feeBps) / basisPointsDivisor;
     }
 }

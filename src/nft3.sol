@@ -79,7 +79,6 @@ contract EqualfiNFT is ERC721URIStorage, AccessControl, ReentrancyGuard {
     address public admin; // Admin address to receive liquidity position NFT
 
     // Role identifiers using keccak256 hash of role names
-    bytes32 public constant _MINT = keccak256("_MINT"); // Role for minting NFTs
     bytes32 public constant _ADMIN = keccak256("_ADMIN"); // Role for performing admin tasks
     bytes32 public constant _RESCUE = keccak256("_RESCUE"); // Role for rescue functions (recovering assets)
 
@@ -228,13 +227,9 @@ contract EqualfiNFT is ERC721URIStorage, AccessControl, ReentrancyGuard {
             tokenRewardAmount: 1e21
         });
 
-        // Set admin address
-        admin = msg.sender;
-
         // Grant roles to the contract deployer
         _grantRole(DEFAULT_ADMIN_ROLE, _msgSender()); // Grant default admin role
         _grantRole(_ADMIN, _msgSender()); // Grant admin role
-        _grantRole(_MINT, _msgSender()); // Grant mint role
     }
 
     // ========================== Admin Functions ==========================

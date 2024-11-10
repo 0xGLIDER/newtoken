@@ -13,7 +13,7 @@ import "./SuperToken6.sol";
  */
 contract SuperToken3Factory {
     // Array to keep track of deployed SuperToken3 instances
-    SuperToken5[] public deployedSuperTokens;
+    SuperToken6[] public deployedSuperTokens;
 
     // Event emitted when a new SuperToken3 is deployed
     event SuperToken3Deployed(address indexed superToken3Address);
@@ -42,7 +42,7 @@ contract SuperToken3Factory {
         address adminAddress
     ) public returns (address) {
         // Deploy new SuperToken3 instance
-        SuperToken5 superToken = new SuperToken5(
+        SuperToken6 superToken = new SuperToken6(
             _underlyingTokens,
             _token,
             _lpFactory,
