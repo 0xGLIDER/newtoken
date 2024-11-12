@@ -1,83 +1,88 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-// Import OpenZeppelin's IERC20Metadata interface
-import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+// Import OpenZeppelin Contracts
+import "@openzeppelin/contracts/access/AccessControl.sol";
 
-// Import SuperToken contract (which includes TokenIface and ITokenSwap interfaces)
-import "./SuperToken2.sol";
-
+// Import the SuperToken3 contract
+import "./SuperToken6.sol";
 
 /**
- * @title SuperTokenFactory
- * @dev Factory contract for deploying SuperToken contracts.
+ * @title SuperToken3Factory
+ * @dev Factory contract to deploy instances of SuperToken3.
  */
-contract SuperTokenFactory {
-    
-    // Event emitted when a new SuperToken is created
-    event SuperTokenCreated(
-        address indexed superTokenAddress,
-        string name,
-        string symbol,
-        IERC20Metadata[] underlyingTokens,
-        uint256[] amountsPerSuperToken,
-        address tokenIface,
-        address tokenSwap
-    );
+contract SuperToken3Factory {
+    // Array to keep track of deployed SuperToken3 instances
+    SuperToken6[] public deployedSuperTokens;
+
+    // Event emitted when a new SuperToken3 is deployed
+    event SuperToken3Deployed(address indexed superToken3Address);
 
     /**
-     * @dev Creates a new SuperToken contract.
-     * @param name Name of the SuperToken.
-     * @param symbol Symbol of the SuperToken.
-     * @param _underlyingTokens Array of underlying ERC20Metadata token addresses.
-     * @param _amountsPerSuperToken Array of amounts required per SuperToken for each underlying token.
-     * @param _token Address of the TokenIface contract with burnFrom functionality.
-     * @param _tokenSwap Address of the TokenSwap contract.
-     * @return Address of the newly created SuperToken contract.
+     * @dev Deploys a new SuperToken3 contract.
+     * @param _underlyingTokens Array of underlying tokens.
+     * @param _token The EqualFiToken.
+     * @param _lpFactory The SuperTokenLPFactory.
+     * @param _collateralizationRatio The collateralization ratio.
+     * @param _requiredAmountsPerSuperToken The required amounts per SuperToken.
+     * @param poolName Name of the LPToken.
+     * @param poolSymbol Symbol of the LPToken.
+     * @param adminAddress Address to be granted DEFAULT_ADMIN_ROLE on SuperToken3.
+     * @return The address of the deployed SuperToken3 contract.
      */
-    function createSuperToken(
-        string memory name,
-        string memory symbol,
+    function createSuperToken3(
         IERC20Metadata[] memory _underlyingTokens,
-        uint256[] memory _amountsPerSuperToken,
-        TokenIface _token,
-        ITokenSwap _tokenSwap
+        IEqualFiToken _token,
+        SuperTokenLPFactory _lpFactory,
+        uint256 _collateralizationRatio,
+        uint256[] memory _requiredAmountsPerSuperToken,
+        string memory poolName,
+        string memory poolSymbol,
+        IERC721 nft,
+        address adminAddress
     ) public returns (address) {
-        // Validate input arrays
-        require(
-            _underlyingTokens.length >= 2 && _underlyingTokens.length <= 10,
-            "Must have between 2 and 10 underlying tokens"
-        );
-        require(
-            _underlyingTokens.length == _amountsPerSuperToken.length,
-            "Tokens and amounts length mismatch"
-        );
-
-        // Deploy a new SuperToken contract
-        SuperToken superToken = new SuperToken(
-            name,
-            symbol,
+        // Deploy new SuperToken3 instance
+        SuperToken6 superToken = new SuperToken6(
             _underlyingTokens,
-            _amountsPerSuperToken,
             _token,
-            _tokenSwap
+            _lpFactory,
+            _collateralizationRatio,
+            _requiredAmountsPerSuperToken
         );
 
-        // Emit event with relevant details
-        emit SuperTokenCreated(
-            address(superToken),
-            name,
-            symbol,
-            _underlyingTokens,
-            _amountsPerSuperToken,
-            address(_token),
-            address(_tokenSwap)
-        );
+        // Initialize the pool
+        superToken.initializePool(poolName, poolSymbol, adminAddress, nft);
 
-        // Grant ADMIN_ROLE and DEFAULT_ADMIN_ROLE to the caller
-        superToken.grantRole(superToken.ADMIN_ROLE(), msg.sender);
-        superToken.grantRole(superToken.DEFAULT_ADMIN_ROLE(), msg.sender);
+        // Transfer roles to the specified adminAddress
+        superToken.grantRole(superToken.DEFAULT_ADMIN_ROLE(), adminAddress);
+        superToken.grantRole(superToken.ADMIN_ROLE(), adminAddress);
+
+        // Renounce roles from the factory
+        superToken.renounceRole(superToken.DEFAULT_ADMIN_ROLE(), address(this));
+        superToken.renounceRole(superToken.ADMIN_ROLE(), address(this));
+
+        // Keep track of deployed SuperToken3 instances
+        deployedSuperTokens.push(superToken);
+
+        // Emit event
+        emit SuperToken3Deployed(address(superToken));
 
         return address(superToken);
+    }
+
+    /**
+     * @dev Returns the number of SuperToken3 contracts deployed by this factory.
+     */
+    function getDeployedTokensCount() external view returns (uint256) {
+        return deployedSuperTokens.length;
+    }
+
+    /**
+     * @dev Returns the address of a deployed SuperToken3 contract.
+     * @param index The index of the deployed SuperToken3 contract.
+     */
+    function getDeployedToken(uint256 index) external view returns (address) {
+        require(index < deployedSuperTokens.length, "Index out of bounds");
+        return address(deployedSuperTokens[index]);
     }
 }

@@ -2,13 +2,13 @@
 pragma solidity ^0.8.0;
 
 // OpenZeppelin Imports
+
 //import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import { ONFT721Core } from "@layerzerolabs/onft-evm/contracts/onft721/ONFT721Core.sol";
-//import { OFT } from "@layerzerolabs/oft-evm/contracts/OFT.sol";
 
 // Custom Imports
 import { IEqualFiToken } from "./interfaces/IEqualFiToken.sol";
@@ -52,6 +52,7 @@ interface IWETH9 {
  * @title EqualFiNFT
  * @dev ERC721 NFT Contract with Integrated Uniswap V3 Liquidity Provision
  */
+ 
 contract EqualfiNFT is ONFT721Core, ERC721URIStorage, AccessControl, ReentrancyGuard {
     
     // ========================== State Variables ==========================
@@ -187,7 +188,6 @@ contract EqualfiNFT is ONFT721Core, ERC721URIStorage, AccessControl, ReentrancyG
         int24 _initialTickUpper,// Initial upper tick
         address _lzEndpoint,
         address _delegate
-
     ) ERC721("NewNFT", "NFT") ONFT721Core(_lzEndpoint, _delegate) {
         currentTokenURI = _tokenURI;
         txFee = 1.5e19; // Set initial transaction fee for transfers
@@ -693,5 +693,4 @@ contract EqualfiNFT is ONFT721Core, ERC721URIStorage, AccessControl, ReentrancyG
         _safeMint(_to, _tokenId);
     }
 }
-
 

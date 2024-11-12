@@ -7,11 +7,11 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "./interfaces/ITokenSwap.sol";
 import "./interfaces/ITokenIface.sol";
-import "./interfaces/IFlashLoanReceiver.sol";
+import "./interfaces/IFlashLoanReceiver1.sol";
 
 // Import Custom Contracts
-import "./LPToken.sol";          // Custom ERC20 LP Token with Mint/Burn functionality
-import "./ERC20Factory.sol";     // Factory to create ERC20 tokens
+//import "./LPToken.sol";          // Custom ERC20 LP Token with Mint/Burn functionality
+import "./EqualFiLPFactory.sol";     // Factory to create ERC20 tokens
 
 /**
  * @title EqualFiLending
@@ -473,7 +473,7 @@ contract EqualFiLending is AccessControl, ReentrancyGuard {
         stablecoin.transfer(receiverAddress, amount);
 
         // The receiver executes their custom logic
-        IFlashLoanReceiver(receiverAddress).executeOperation(amount, fee, params);
+        IFlashLoanReceiver1(receiverAddress).executeOperation(amount, fee, params);
 
         // After the operation, calculate the amount repaid
         uint256 balanceAfter = stablecoin.balanceOf(address(this));
