@@ -3,3 +3,7 @@
 @uniswap/v3-core/=lib/v3-core/
 @uniswap/v3-periphery/=lib/v3-periphery/
 ds-test/=lib/forge-std/lib/ds-test/src/
+@layerzerolabs/oft-evm/=lib/devtools/packages/oft-evm/
+@layerzerolabs/onft-evm/=lib/devtools/packages/onft-evm/
+@layerzerolabs/oapp-evm/=lib/devtools/packages/oapp-evm/
+@layerzerolabs/lz-evm-protocol-v2/=lib/layerzero-v2/packages/layerzero-v2/evm/protocol/

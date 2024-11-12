@@ -2,11 +2,13 @@
 pragma solidity ^0.8.0;
 
 // OpenZeppelin Imports
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+
+//import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
+import { ONFT721Core } from "@layerzerolabs/onft-evm/contracts/onft721/ONFT721Core.sol";
 
 // Custom Imports
 import { IEqualFiToken } from "./interfaces/IEqualFiToken.sol";
@@ -50,7 +52,8 @@ interface IWETH9 {
  * @title EqualFiNFT
  * @dev ERC721 NFT Contract with Integrated Uniswap V3 Liquidity Provision
  */
-contract EqualfiNFT is ERC721URIStorage, AccessControl, ReentrancyGuard {
+ 
+contract EqualfiNFT is ONFT721Core, ERC721URIStorage, AccessControl, ReentrancyGuard {
     
     // ========================== State Variables ==========================
     
@@ -182,8 +185,10 @@ contract EqualfiNFT is ERC721URIStorage, AccessControl, ReentrancyGuard {
         address _weth, // WETH9 Contract
         uint24 _uniswapFeeTier, // Uniswap V3 fee tier (e.g., 3000)
         int24 _initialTickLower, // Initial lower tick
-        int24 _initialTickUpper // Initial upper tick
-    ) ERC721("NewNFT", "NFT") {
+        int24 _initialTickUpper,// Initial upper tick
+        address _lzEndpoint,
+        address _delegate
+    ) ERC721("NewNFT", "NFT") ONFT721Core(_lzEndpoint, _delegate) {
         currentTokenURI = _tokenURI;
         txFee = 1.5e19; // Set initial transaction fee for transfers
         Iface = IEqualFiToken(_ifaceAddress); // Set iface contract for ERC20 minting/burning
@@ -642,4 +647,50 @@ contract EqualfiNFT is ERC721URIStorage, AccessControl, ReentrancyGuard {
      * @dev Fallback function to handle calls with data.
      */
     fallback() external payable {}
+
+    /**
+     * @notice Retrieves the address of the underlying ERC721 implementation (ie. this contract).
+     */
+    function token() external view returns (address) {
+        return address(this);
+    }
+
+    /**
+     * @notice Indicates whether the ONFT721 contract requires approval of the 'token()' to send.
+     * @dev In the case of ONFT where the contract IS the token, approval is NOT required.
+     * @return requiresApproval Needs approval of the underlying token implementation.
+     */
+    function approvalRequired() external pure virtual returns (bool) {
+        return false;
+    }
+
+    function _debit(address _from, uint256 _tokenId, uint32 /*_dstEid*/) internal virtual override {
+        if (_from != ERC721.ownerOf(_tokenId)) revert OnlyNFTOwner(_from, ERC721.ownerOf(_tokenId));
+        // Determine the level of the NFT and update supply accordingly
+        uint256 level = nftOwnerInfo[msg.sender].level;
+        require(level >=1 && level <=3, "Invalid NFT level");
+
+        if (level == 1) {
+            supplyInfo.goldSupply--;
+        } else if (level == 2) {
+            supplyInfo.silverSupply--;
+        } else if (level == 3) {
+            supplyInfo.bronzeSupply--;
+        }
+
+        totalSupply--;
+
+        // Reset ownership information
+        nftOwnerInfo[msg.sender].level = 0;
+        nftOwnerInfo[msg.sender].hasNFT = false;
+        _burn(_tokenId);
+    }
+
+    function _credit(address _to, uint256 _tokenId, uint32 /*_srcEid*/) internal virtual override {
+        uint256 tokenId = ++nextTokenId;
+        string memory newID = string.concat(currentTokenURI, addressToString(_msgSender()));
+        _setTokenURI(tokenId, newID);
+        _safeMint(_to, _tokenId);
+    }
 }
+
