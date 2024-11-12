@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "./loans16.sol";         // Import main lending contract logic
-import "./ERC20Factory.sol";    // Import factory for creating LP tokens
+import "./EqualFiLPFactory.sol";    // Import factory for creating LP tokens
 
 /**
  * @title EqualFiLendingPoolFactory
