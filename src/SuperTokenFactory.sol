@@ -11,12 +11,12 @@ import "./SuperToken6.sol";
  * @title SuperToken3Factory
  * @dev Factory contract to deploy instances of SuperToken3.
  */
-contract SuperToken3Factory {
+contract SuperToken6Factory {
     // Array to keep track of deployed SuperToken3 instances
     SuperToken6[] public deployedSuperTokens;
 
     // Event emitted when a new SuperToken3 is deployed
-    event SuperToken3Deployed(address indexed superToken3Address);
+    event SuperToken6Deployed(address indexed superToken6Address);
 
     /**
      * @dev Deploys a new SuperToken3 contract.
@@ -65,7 +65,7 @@ contract SuperToken3Factory {
         deployedSuperTokens.push(superToken);
 
         // Emit event
-        emit SuperToken3Deployed(address(superToken));
+        emit SuperToken6Deployed(address(superToken));
 
         return address(superToken);
     }

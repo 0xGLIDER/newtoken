@@ -103,17 +103,18 @@ contract EqualFIOmnichainToken is OFT, ReentrancyGuard, AccessControl {
         string memory _name,
         string memory _symbol,
         address _lzEndpoint,
-        address _delegate
+        address _delegate,
+        address admin
     ) OFT(_name, _symbol, _lzEndpoint, _delegate) Ownable(_delegate) {
         _cap = 1e25; // Set the supply cap to 10 million tokens (10^7 * 10^18 = 1e25 wei)
         mintDisabled = false; // Initially enable minting
         mintToDisabled = false; // Initially enable minting to specific addresses
-        _grantRole(DEFAULT_ADMIN_ROLE, _msgSender());
+        _grantRole(DEFAULT_ADMIN_ROLE, admin);
 
         // Grant initial roles to the deployer
-        _grantRole(_ADMIN, _msgSender());
-        _grantRole(_MINT, _msgSender());
-        _grantRole(_BURN, _msgSender());
+        _grantRole(_ADMIN, admin);
+        _grantRole(_MINT, admin);
+        _grantRole(_BURN, admin);
 
         // Mint 1 million tokens to the deployer for initial use (1e6 * 10^18 = 1e24 wei)
         _mint(_msgSender(), 1e24);
@@ -385,6 +386,14 @@ contract EqualFIOmnichainToken is OFT, ReentrancyGuard, AccessControl {
         _mint(_to, _amountLD);
         // @dev In the case of NON-default OFT, the _amountLD MIGHT not be == amountReceivedLD.
         return _amountLD;
+    }
+
+    function bridgeTo(address _from, uint256 _amountLD, uint256 _minAmountLD, uint32 _dstEid) external nonReentrant {
+        _debit(_from, _amountLD, _minAmountLD, _dstEid);
+    }
+
+    function bridgeFrom(address _to, uint256 _amountLD, uint32 _srcEid) external nonReentrant {
+        _credit(_to, _amountLD, _srcEid);
     }
     
 }
