@@ -15,9 +15,6 @@ contract EqualFIOmnichainToken is OFT, ReentrancyGuard, AccessControl {
 
     // ========================== Roles ==========================
 
-    /// @notice Role identifier for minting new tokens
-    bytes32 public constant _MINT = keccak256("_MINT");
-
     /// @notice Role identifier for minting tokens to specific addresses
     bytes32 public constant _MINTTO = keccak256("_MINTTO");
 
@@ -32,9 +29,6 @@ contract EqualFIOmnichainToken is OFT, ReentrancyGuard, AccessControl {
 
     /// @notice Role identifier for administrative tasks
     bytes32 public constant _ADMIN = keccak256("_ADMIN");
-
-    /// @notice Role identifier for rescuing tokens and Ether
-    bytes32 public constant _RESCUE = keccak256("_RESCUE");
    
     // ========================== State Variables ==========================
 
@@ -44,19 +38,10 @@ contract EqualFIOmnichainToken is OFT, ReentrancyGuard, AccessControl {
     /// @notice Transaction fee for transfers (0.005 tokens, assuming 18 decimals)
     uint public txFee = 5e15;
 
-    /// @notice Flag to pause the contract's operations
-    bool public paused;
-
-    /// @notice Flag to disable minting
-    bool public mintDisabled;
-
     /// @notice Flag to disable minting to specific addresses
     bool public mintToDisabled;
     
     // ========================== Events ==========================
-
-    /// @notice Emitted when tokens are minted
-    event TokensMinted(uint _amount);
 
     /// @notice Emitted when tokens are minted to a specific address
     event TokensMintedTo(address _to, uint _amount);
@@ -70,29 +55,11 @@ contract EqualFIOmnichainToken is OFT, ReentrancyGuard, AccessControl {
     /// @notice Emitted when the supply cap is changed
     event SupplyCapChanged(uint _newCap, address _changedBy);
 
-    /// @notice Emitted when the contract is paused
-    event ContractPaused(uint _blockHeight, address _pausedBy);
-
-    /// @notice Emitted when the contract is unpaused
-    event ContractUnpaused(uint _blockHeight, address _unpausedBy);
-
-    /// @notice Emitted when minting is enabled
-    event MintingEnabled(uint _blockHeight, address _enabledBy);
-
-    /// @notice Emitted when minting is disabled
-    event MintingDisabled(uint _blockHeight, address _disabledBy);
-
     /// @notice Emitted when minting to specific addresses is enabled
     event MintingToEnabled(uint _blockHeight, address _enabledBy);
 
     /// @notice Emitted when minting to specific addresses is disabled
     event MintingToDisabled(uint _blockHeight, address _disabledBy);
-
-    /// @notice Emitted when Ether is rescued from the contract
-    event ETHRescued(address _dest, uint _blockHeight, uint _amount);
-
-    /// @notice Emitted when ERC20 tokens are rescued from the contract
-    event ERC20Rescued(IERC20 _token, uint _blockHeight, address _dest, uint _amount);
 
     // ========================== Mappings ==========================
 
@@ -107,13 +74,11 @@ contract EqualFIOmnichainToken is OFT, ReentrancyGuard, AccessControl {
         address admin
     ) OFT(_name, _symbol, _lzEndpoint, _delegate) Ownable(_delegate) {
         _cap = 1e25; // Set the supply cap to 10 million tokens (10^7 * 10^18 = 1e25 wei)
-        mintDisabled = false; // Initially enable minting
         mintToDisabled = false; // Initially enable minting to specific addresses
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
 
         // Grant initial roles to the deployer
         _grantRole(_ADMIN, admin);
-        _grantRole(_MINT, admin);
         _grantRole(_BURN, admin);
 
         // Mint 1 million tokens to the deployer for initial use (1e6 * 10^18 = 1e24 wei)
@@ -121,22 +86,6 @@ contract EqualFIOmnichainToken is OFT, ReentrancyGuard, AccessControl {
     }
 
     // ========================== Modifiers ==========================
-
-    /**
-     * @dev Modifier to ensure that the contract is not paused before executing the function.
-     */
-    modifier pause() {
-        require(!paused, "Contract: Contract is Paused");
-        _;
-    }
-    
-    /**
-     * @dev Modifier to ensure that minting is not disabled before executing the function.
-     */
-    modifier mintDis() {
-        require(!mintDisabled, "Minting disabled");
-        _;
-    }
     
     /**
      * @dev Modifier to ensure that minting to specific addresses is not disabled before executing the function.
@@ -147,36 +96,6 @@ contract EqualFIOmnichainToken is OFT, ReentrancyGuard, AccessControl {
     }
     
     // ========================== Admin Functions ==========================
-
-    /**
-     * @dev Function to pause or unpause the contract's operations. 
-     *      Only callable by an admin.
-     * @param _paused Boolean indicating whether the contract should be paused (true) or unpaused (false).
-     */
-    function setPaused(bool _paused) external onlyRole(_ADMIN) {
-        paused = _paused;
-
-        if (_paused) {
-            emit ContractPaused(block.number, _msgSender());
-        } else {
-            emit ContractUnpaused(block.number, _msgSender());
-        }
-    }
-
-    /**
-     * @dev Function to disable or enable minting.
-     *      Only callable by an admin.
-     * @param _disableMinting Boolean indicating whether minting should be disabled (true) or enabled (false).
-     */
-    function disableMint(bool _disableMinting) external onlyRole(_ADMIN) {
-        mintDisabled = _disableMinting;
-
-        if (_disableMinting) {
-            emit MintingDisabled(block.number, _msgSender());
-        } else {
-            emit MintingEnabled(block.number, _msgSender());
-        }
-    }   
 
     /**
      * @dev Function to disable or enable minting to specific addresses.
@@ -198,7 +117,7 @@ contract EqualFIOmnichainToken is OFT, ReentrancyGuard, AccessControl {
      *      Only callable by an admin.
      * @param _supplyCap The new supply cap.
      */
-    function setSupplyCap(uint _supplyCap) external pause onlyRole(_SUPPLY) {
+    function setSupplyCap(uint _supplyCap) external onlyRole(_SUPPLY) {
         require(_supplyCap >= totalSupply(), "Contract: Supply Cap too low");
         _cap = _supplyCap;
         emit SupplyCapChanged(_supplyCap, _msgSender());
@@ -240,31 +159,21 @@ contract EqualFIOmnichainToken is OFT, ReentrancyGuard, AccessControl {
      * @param _to The address to mint tokens to.
      * @param _amount The amount of tokens to mint.
      */
-    function mintTo(address _to, uint _amount) external pause mintToDis onlyRole(_MINTTO) {
+    function mintTo(address _to, uint _amount) external mintToDis onlyRole(_MINTTO) {
         require(totalSupply() + _amount <= _cap, "Contract: Supply Cap exceeded");
         emit TokensMintedTo(_to, _amount);
         _mint(_to, _amount);
     }
 
-    /**
-     * @dev Function to mint tokens to the caller.
-     *      Only callable by an address with the _MINT role, and if minting is enabled and contract is not paused.
-     * @param _amount The amount of tokens to mint.
-     */
-    function mint(uint _amount) external pause mintDis onlyRole(_MINT) {
-        require(totalSupply() + _amount <= _cap, "Contract: Supply Cap exceeded");
-        emit TokensMinted(_amount);
-        _mint(_msgSender(), _amount);
-    }
+
     
     // ========================== Burning Functions ==========================
 
     /**
      * @dev Function to burn tokens from the caller's balance.
-     *      Only callable by an address with the _BURN role, and if the contract is not paused.
      * @param _amount The amount of tokens to burn.
      */
-    function burn(uint _amount) external pause onlyRole(_BURN) { 
+    function burn(uint _amount) external { 
         emit TokensBurned(_amount, _msgSender());
         _burn(_msgSender(), _amount);
     }
@@ -275,7 +184,7 @@ contract EqualFIOmnichainToken is OFT, ReentrancyGuard, AccessControl {
      * @param _from The address to burn tokens from.
      * @param _amount The amount of tokens to burn.
      */
-    function burnFrom(address _from, uint _amount) external pause onlyRole(_BURNFROM) {
+    function burnFrom(address _from, uint _amount) external onlyRole(_BURNFROM) {
         emit TokensBurnedFrom(_from, _amount, _msgSender());
         _burn(_from, _amount);
     }
@@ -329,71 +238,6 @@ contract EqualFIOmnichainToken is OFT, ReentrancyGuard, AccessControl {
         }
 
         return true;
-    }
-
-    // ========================== Rescue Functions ==========================
-
-    /**
-     * @dev Function to rescue ERC20 tokens sent to the contract by mistake.
-     *      Only callable by an account with the _RESCUE role.
-     * @param _ERC20 The ERC20 token contract to rescue.
-     * @param _dest The address to send the rescued tokens to.
-     * @param _ERC20Amount The amount of tokens to rescue.
-     */
-    function moveERC20(IERC20 _ERC20, address _dest, uint _ERC20Amount) nonReentrant public onlyRole(_RESCUE) {
-        IERC20(_ERC20).safeTransfer(_dest, _ERC20Amount);
-        emit ERC20Rescued(_ERC20, block.number, _dest, _ERC20Amount);
-    }
-
-    /**
-     * @dev Burns tokens from the sender's specified balance.
-     * @param _from The address to debit the tokens from.
-     * @param _amountLD The amount of tokens to send in local decimals.
-     * @param _minAmountLD The minimum amount to send in local decimals.
-     * @param _dstEid The destination chain ID.
-     * @return amountSentLD The amount sent in local decimals.
-     * @return amountReceivedLD The amount received in local decimals on the remote.
-     */
-    function _debit(
-        address _from,
-        uint256 _amountLD,
-        uint256 _minAmountLD,
-        uint32 _dstEid
-    ) internal virtual override returns (uint256 amountSentLD, uint256 amountReceivedLD) {
-        (amountSentLD, amountReceivedLD) = _debitView(_amountLD, _minAmountLD, _dstEid);
-
-        // @dev In NON-default OFT, amountSentLD could be 100, with a 10% fee, the amountReceivedLD amount is 90,
-        // therefore amountSentLD CAN differ from amountReceivedLD.
-
-        // @dev Default OFT burns on src.
-        _burn(_from, amountSentLD);
-    }
-
-    /**
-     * @dev Credits tokens to the specified address.
-     * @param _to The address to credit the tokens to.
-     * @param _amountLD The amount of tokens to credit in local decimals.
-     * @dev _srcEid The source chain ID.
-     * @return amountReceivedLD The amount of tokens ACTUALLY received in local decimals.
-     */
-    function _credit(
-        address _to,
-        uint256 _amountLD,
-        uint32 /*_srcEid*/
-    ) internal virtual override returns (uint256 amountReceivedLD) {
-        if (_to == address(0x0)) _to = address(0xdead); // _mint(...) does not support address(0x0)
-        // @dev Default OFT mints on dst.
-        _mint(_to, _amountLD);
-        // @dev In the case of NON-default OFT, the _amountLD MIGHT not be == amountReceivedLD.
-        return _amountLD;
-    }
-
-    function bridgeTo(address _from, uint256 _amountLD, uint256 _minAmountLD, uint32 _dstEid) external nonReentrant {
-        _debit(_from, _amountLD, _minAmountLD, _dstEid);
-    }
-
-    function bridgeFrom(address _to, uint256 _amountLD, uint32 _srcEid) external nonReentrant {
-        _credit(_to, _amountLD, _srcEid);
     }
     
 }
